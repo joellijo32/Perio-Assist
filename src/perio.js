@@ -42,6 +42,19 @@ function toNum(t) {
   return /^\d+$/.test(t) ? +t : NUMWORDS[t];
 }
 
+// ponytail: one tooth resolver for jump + announcements - composites included
+function resolveTooth(toks, i) {
+  let j = i;
+  while (toks[j] === 'to' || toks[j] === 'tooth') j++; // "go to 12"
+  let n = toNum(toks[j]);
+  const u = toNum(toks[j + 1]);
+  if ((toks[j] === 'twenty' || toks[j] === 'thirty') && u >= 0 && u <= 9) {
+    n += u;
+    j++;
+  }
+  return n >= 1 && n <= 32 ? [n, j + 1] : null;
+}
+
 export function createState() {
   return {
     teeth: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(null)])),
@@ -82,7 +95,8 @@ function shrinkGroup(state) {
 export function parseInto(state, text) {
   const t0 = performance.now();
   const mark = state.hist.length;
-  const toks = text.toLowerCase().replace(/tooth /g, '').split(/\s+/);
+  // ponytail: punctuation -> space ("twenty-four" stays two words, "facial:" matches)
+  const toks = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
   let nums = [];
   const flush = () => {
     if (!nums.length) return;
@@ -97,6 +111,8 @@ export function parseInto(state, text) {
   for (let i = 0; i < toks.length; i++) {
     const w = toks[i];
     if (w in NUMWORDS || /^\d+$/.test(w)) {
+      // "2 millimeters recession" is recession, not a depth (stored in step 3)
+      if (String(toks[i + 1]).startsWith('millimeter') && toks[i + 2] === 'recession') { i += 2; continue; }
       const v = NUMWORDS[w] ?? +w;
       if (v >= 0 && v <= 12) nums.push(v);
       continue;
@@ -106,26 +122,25 @@ export function parseInto(state, text) {
     if (w === 'repeat') { flush(); nums = [...state.last]; continue; }
     if (w === 'jump' || w === 'go') {
       flush();
-      let j = i + 1;
-      while (toks[j] === 'to' || toks[j] === 'tooth') j++; // "go to 12"
-      let n = toNum(toks[j]);
-      const u = toNum(toks[j + 1]);
-      if ((toks[j] === 'twenty' || toks[j] === 'thirty') && u >= 0 && u <= 9) {
-        n = n + u;
-        j++;
-      }
-      if (n >= 1 && n <= 32) {
-        state.cur = { t: n, s: 0 };
-        i = j;
+      const r = resolveTooth(toks, i + 1);
+      if (r) {
+        state.cur = { t: r[0], s: 0 };
+        i = r[1] - 1;
         const site = toSite(toks, i + 1); // "jump 12 MB"
         if (site) { state.cur.s = site[0]; i = site[1] - 1; }
       }
       continue;
     }
+    if (w === 'tooth' || w === 'number') {
+      flush();
+      const r = resolveTooth(toks, i + 1); // never a depth, even bare ("tooth 12")
+      if (r) { state.cur = { t: r[0], s: 0 }; i = r[1] - 1; }
+      continue;
+    }
     if (w === 'next') { flush(); state.cur = { t: Math.min(32, state.cur.t + 1), s: 0 }; continue; }
     if (w === 'back') { flush(); state.cur = { t: Math.max(1, state.cur.t - 1), s: 0 }; continue; }
     if (w === 'skip' || w === 'miss') { flush(); advance(state, 6 - (state.cur.s % 6) || 6); continue; }
-    if (w === 'bleeding' || w === 'blood' || w === 'bop') {
+    if (w === 'bleeding' || w === 'blood' || w === 'bop' || w === 'bleed' || w === 'drop') {
       flush();
       const site = toSite(toks, i + 1); // "bleeding MB", "bleeding at mesiobuccal"
       if (site) {
