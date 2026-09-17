@@ -1,0 +1,28 @@
+import { strict as assert } from 'node:assert';
+import { createState, parseInto } from './perio.js';
+
+// ponytail: one runnable check for the branchy bit - fails if the parser breaks
+const s = createState();
+parseInto(s, 'three two three');
+assert.equal(s.teeth[1].slice(0, 3).join(), '3,2,3', 'triplet');
+parseInto(s, 'repeat');
+assert.equal(s.teeth[1].slice(3).join(), '3,2,3', 'repeat');
+parseInto(s, 'jump 24');
+assert.equal(s.cur.t, 24, 'jump');
+parseInto(s, 'four bleeding');
+assert.equal(s.teeth[24][0], 4, 'depth');
+assert.equal(s.bleed[24][0], true, 'bleed');
+// voice-realistic navigation: words, filler "to", composites
+for (const [cmd, tooth] of [
+  ['go 12', 12],
+  ['go twelve', 12],
+  ['go to 12', 12],
+  ['go to tooth 24', 24],
+  ['jump twenty four', 24],
+  ['go fifteen', 15],
+  ['jump thirty two', 32],
+]) {
+  parseInto(s, cmd);
+  assert.equal(s.cur.t, tooth, cmd);
+}
+console.log('perio.test ok');
