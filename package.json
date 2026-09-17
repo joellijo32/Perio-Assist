@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node src/perio.test.js",
-    "eval": "node scripts/eval.js"
+    "eval": "node scripts/eval.js",
+    "cases": "node scripts/cases.js"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",

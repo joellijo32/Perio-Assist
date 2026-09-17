@@ -4,6 +4,9 @@ const GRAMMAR = JSON.stringify([
   'bleeding bleed blood bop drop repeat jump go next back skip miss missing clear scratch undo tooth',
   'mb b db ml l dl mesiobuccal buccal distobuccal mesiolingual lingual distolingual mesial distal at on',
   'implant millimeter millimeters recession facial lingual correction change make last',
+  'mid all throughout no not without some any midbuccal probing noted',
+  'upper lower left right first second third molar premolar bicuspid canine cuspid lateral central wisdom',
+  'mobility slight moderate severe furcation suppuration miller fdi teeth number through thru and are class',
   '[unk]',
 ]);
 
