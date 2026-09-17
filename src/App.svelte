@@ -36,8 +36,8 @@
     draft = '';
   }
 
-  function cellClass(v, bled) {
-    return `s${v >= 6 ? ' g6' : v >= 4 ? ' g4' : ''}${bled ? ' bleed' : ''}`;
+  function cellClass(v, bled, rec) {
+    return `s${v >= 6 ? ' g6' : v >= 4 ? ' g4' : ''}${bled ? ' bleed' : ''}${rec > 0 ? ' rc' : ''}`;
   }
 
   onDestroy(() => recognizer.stop());
@@ -60,13 +60,16 @@
     {#if store.latencyMs !== null}<span>{store.latencyMs.toFixed(0)}ms parse+render</span>{/if}
   </div>
 
-  <div class="legend">MB mesiobuccal · B buccal · DB distobuccal · ML mesiolingual · L lingual · DL distolingual</div>
+  <div class="legend">MB mesiobuccal · B buccal · DB distobuccal · ML mesiolingual · L lingual · DL distolingual · dotted top = recession · * = missing/implant</div>
   <div id="grid">
     {#each Object.entries(store.teeth) as [t, sites] (t)}
-      <div class="t" class:cur={+t === store.cur.t}>
-        <b>{t}</b><br />
+      <div class="t" class:cur={+t === store.cur.t} class:miss={!!store.status[t]}>
+        <b>{t}{store.status[t] ? '*' : ''}</b><br />
         {#each sites as v, s (s)}
-          <span class={cellClass(v, store.bleed[t][s])} title={`${t} ${SITENAMES[s]}`}>{v ?? '.'}</span>
+          <span
+            class={cellClass(v, store.bleed[t][s], store.rec[t][s])}
+            title={`${t} ${SITENAMES[s]}${store.rec[t][s] ? `, rec ${store.rec[t][s]}` : ''}`}
+          >{v ?? '.'}</span>
         {/each}
       </div>
     {/each}
@@ -94,6 +97,8 @@
   .t.cur { outline: 2px solid blue; }
   .s { display: inline-block; width: 18px; text-align: center; margin: 1px; background: #eee; }
   .s.bleed { border-bottom: 3px solid red; }
+  .s.rc { border-top: 2px dotted #1976d2; }
+  .t.miss { opacity: 0.45; }
   .g4 { background: #ffeb3b; }
   .g6 { background: #ef9a9a; }
   input { width: 100%; padding: 8px; box-sizing: border-box; }

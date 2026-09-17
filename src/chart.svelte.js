@@ -20,7 +20,9 @@ export function say(text, final) {
 
 export function commit(text) {
   say(text, true);
-  store.latencyMs = parseInto(store, text);
+  const r = parseInto(store, text);
+  store.latencyMs = r.ms;
+  if (r.hint) store.status = r.hint;
 }
 
 export function resetAll() {
@@ -31,6 +33,10 @@ export function resetAll() {
   store.last = fresh.last;
   store.hist = fresh.hist;
   store.groups = fresh.groups;
+  store.status = fresh.status;
+  store.rec = fresh.rec;
+  store.aspect = fresh.aspect;
+  store.aspectSet = fresh.aspectSet;
   store.transcript = [];
   store.latencyMs = null;
 }

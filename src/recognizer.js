@@ -1,8 +1,9 @@
 // ponytail: two engines behind one start/stop - CDN Vosk global, swap to npm import if bundling matters
 const GRAMMAR = JSON.stringify([
   'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty',
-  'bleeding blood bop repeat jump go next back skip miss missing clear scratch undo tooth',
+  'bleeding bleed blood bop drop repeat jump go next back skip miss missing clear scratch undo tooth',
   'mb b db ml l dl mesiobuccal buccal distobuccal mesiolingual lingual distolingual mesial distal at on',
+  'implant millimeter millimeters recession facial lingual correction change make last',
   '[unk]',
 ]);
 

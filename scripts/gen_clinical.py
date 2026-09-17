@@ -28,8 +28,9 @@ CORRECTION_TEMPLATES = [
     "correction, {val} on {site}",
     "change last to {val}",
     "wait, make that {val}",
-    "scratch that, {val} with bleeding"
 ]
+# NOTE: no correction template may assert a clinical finding ("with bleeding",
+# "no bleeding", ...). Templates must be finding-neutral so ground truth stays exact.
 
 OPERATORY_NOISE = [
     "rinse please", "hand me the explorer", "open slightly wider", 
