@@ -49,4 +49,33 @@ parseInto(s, 'bleeding');
 assert.equal(s.teeth[14][0], 5, 'depth kept');
 assert.equal(s.bleed[14][0], true, 'bare bleed kept');
 assert.equal(s.cur.s, 1, 'bare bleed no move');
+assert.equal(s.cur.s, 1, 'bare bleed no move');
+// undo reverts a whole utterance (triplet) and parks the cursor at its start
+parseInto(s, 'jump 20');
+parseInto(s, '3 2 3');
+parseInto(s, 'undo');
+assert.equal(s.teeth[20].every((v) => v === null), true, 'undo triplet');
+assert.deepEqual(s.cur, { t: 20, s: 0 }, 'undo cursor');
+// undo reverts bleed flags too
+parseInto(s, 'jump 21');
+parseInto(s, 'bleeding MB');
+parseInto(s, 'undo');
+assert.equal(s.bleed[21][0], false, 'undo bleed');
+assert.deepEqual(s.cur, { t: 21, s: 0 }, 'undo bleed cursor');
+// clear then undo: group bookkeeping stays consistent
+parseInto(s, 'jump 22');
+parseInto(s, '4 5 6');
+parseInto(s, 'clear');
+assert.equal(s.teeth[22][2], null, 'clear tip');
+parseInto(s, 'undo');
+assert.equal(s.teeth[22].every((v) => v === null), true, 'undo after clear');
+assert.deepEqual(s.cur, { t: 22, s: 0 }, 'undo after clear cursor');
+// same-breath "3 2 3 undo" reverts its own writes, older groups untouched
+parseInto(s, 'jump 23');
+parseInto(s, '1 1 1');
+parseInto(s, '3 2 3 undo');
+assert.equal(s.teeth[23].slice(0, 3).join(), '1,1,1', 'older group kept');
+assert.equal(s.teeth[23].slice(3).every((v) => v === null), true, 'own writes reverted');
+parseInto(s, 'undo');
+assert.equal(s.teeth[23].every((v) => v === null), true, 'older group undoable');
 console.log('perio.test ok');

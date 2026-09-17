@@ -30,6 +30,7 @@ export function resetAll() {
   store.cur = fresh.cur;
   store.last = fresh.last;
   store.hist = fresh.hist;
+  store.groups = fresh.groups;
   store.transcript = [];
   store.latencyMs = null;
 }

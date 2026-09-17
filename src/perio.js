@@ -49,6 +49,7 @@ export function createState() {
     cur: { t: 1, s: 0 },
     last: [],
     hist: [],
+    groups: [], // hist-entry counts per utterance, for undo
   };
 }
 
@@ -62,16 +63,32 @@ function advance(state, n = 1) {
   }
 }
 
+// ponytail: one restore path for clear + undo - hist kinds stay in one place
+function restore(state, h, moveCursor = true) {
+  if (!h) return;
+  if (h.kind === 'bleed') state.bleed[h.t][h.s] = false;
+  else state.teeth[h.t][h.s] = null;
+  if (moveCursor) state.cur = { t: h.t, s: h.s };
+}
+
+function shrinkGroup(state) {
+  const g = state.groups;
+  if (!g.length) return;
+  g[g.length - 1]--;
+  if (!g[g.length - 1]) g.pop();
+}
+
 /** Parse a transcript chunk into chart state. Returns ms spent. */
 export function parseInto(state, text) {
   const t0 = performance.now();
+  const mark = state.hist.length;
   const toks = text.toLowerCase().replace(/tooth /g, '').split(/\s+/);
   let nums = [];
   const flush = () => {
     if (!nums.length) return;
     state.last = [...nums];
     for (const v of nums) {
-      state.hist.push({ ...state.cur });
+      state.hist.push({ ...state.cur, kind: 'depth' });
       state.teeth[state.cur.t][state.cur.s] = v;
       advance(state);
     }
@@ -114,18 +131,39 @@ export function parseInto(state, text) {
       if (site) {
         state.cur.s = site[0];
         state.bleed[state.cur.t][site[0]] = true;
+        state.hist.push({ t: state.cur.t, s: site[0], kind: 'bleed' });
         i = site[1] - 1;
       } else {
-        state.bleed[state.cur.t][Math.max(0, state.cur.s - 1)] = true;
+        const s = Math.max(0, state.cur.s - 1);
+        state.bleed[state.cur.t][s] = true;
+        state.hist.push({ t: state.cur.t, s, kind: 'bleed' });
       }
       continue;
     }
     if (w === 'clear' || w === 'scratch') {
       flush();
-      const h = state.hist.pop();
-      if (h) { state.teeth[h.t][h.s] = null; state.cur = { ...h }; }
+      const own = state.hist.length > mark;
+      restore(state, state.hist.pop());
+      if (!own) shrinkGroup(state);
+      continue;
+    }
+    if (w === 'undo') {
+      flush();
+      let n = state.hist.length - mark; // own utterance first, else last group
+      if (n <= 0) n = state.groups.pop() ?? 0;
+      let earliest = null;
+      while (n-- > 0) {
+        const h = state.hist.pop();
+        if (!h) break;
+        earliest = h;
+        restore(state, h, false);
+      }
+      if (earliest) state.cur = { t: earliest.t, s: earliest.s };
+      continue;
     }
   }
   flush();
+  const added = state.hist.length - mark;
+  if (added > 0) state.groups.push(added);
   return performance.now() - t0;
 }
