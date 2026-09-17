@@ -2,6 +2,7 @@
 const GRAMMAR = JSON.stringify([
   'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty',
   'bleeding blood bop repeat jump go next back skip miss missing clear scratch tooth',
+  'mb b db ml l dl mesiobuccal buccal distobuccal mesiolingual lingual distolingual mesial distal at on',
   '[unk]',
 ]);
 

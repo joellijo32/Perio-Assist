@@ -7,6 +7,35 @@ export const NUMWORDS = {
   eighteen: 18, nineteen: 19, twenty: 20, thirty: 30,
 };
 
+// ponytail: site codes + spoken anatomy - letter pairs cover split STT ("m b")
+export const SITES = {
+  mb: 0, mesiobuccal: 0,
+  b: 1, be: 1, buccal: 1,
+  db: 2, distobuccal: 2,
+  ml: 3, mesiolingual: 3,
+  l: 4, ell: 4, lingual: 4,
+  dl: 5, distolingual: 5,
+};
+export const SITENAMES = ['MB', 'B', 'DB', 'ML', 'L', 'DL'];
+const SITE_FILLER = new Set(['at', 'on']);
+const SITE_PAIRS = {
+  mesial: { buccal: 0, lingual: 3 },
+  distal: { buccal: 2, lingual: 5 },
+  m: { b: 0, l: 3 },
+  d: { b: 2, l: 5 },
+};
+
+/** Resolve a site at toks[i], skipping at/on. Returns [index, nextI] or null; never consumes on miss. */
+function toSite(toks, i) {
+  let j = i;
+  while (SITE_FILLER.has(toks[j])) j++;
+  if (toks[j] in SITES) return [SITES[toks[j]], j + 1];
+  if (toks[j] in SITE_PAIRS && toks[j + 1] in SITE_PAIRS[toks[j]]) {
+    return [SITE_PAIRS[toks[j]][toks[j + 1]], j + 2];
+  }
+  return null;
+}
+
 // ponytail: spoken tooth numbers ("twenty four") - depths stay capped at 12 by the caller
 function toNum(t) {
   if (t == null) return undefined;
@@ -55,6 +84,8 @@ export function parseInto(state, text) {
       if (v >= 0 && v <= 12) nums.push(v);
       continue;
     }
+    const bare = toSite(toks, i);
+    if (bare) { flush(); state.cur.s = bare[0]; i = bare[1] - 1; continue; }
     if (w === 'repeat') { flush(); nums = [...state.last]; continue; }
     if (w === 'jump' || w === 'go') {
       flush();
@@ -69,6 +100,8 @@ export function parseInto(state, text) {
       if (n >= 1 && n <= 32) {
         state.cur = { t: n, s: 0 };
         i = j;
+        const site = toSite(toks, i + 1); // "jump 12 MB"
+        if (site) { state.cur.s = site[0]; i = site[1] - 1; }
       }
       continue;
     }
@@ -77,7 +110,14 @@ export function parseInto(state, text) {
     if (w === 'skip' || w === 'miss') { flush(); advance(state, 6 - (state.cur.s % 6) || 6); continue; }
     if (w === 'bleeding' || w === 'blood' || w === 'bop') {
       flush();
-      state.bleed[state.cur.t][Math.max(0, state.cur.s - 1)] = true;
+      const site = toSite(toks, i + 1); // "bleeding MB", "bleeding at mesiobuccal"
+      if (site) {
+        state.cur.s = site[0];
+        state.bleed[state.cur.t][site[0]] = true;
+        i = site[1] - 1;
+      } else {
+        state.bleed[state.cur.t][Math.max(0, state.cur.s - 1)] = true;
+      }
       continue;
     }
     if (w === 'clear' || w === 'scratch') {

@@ -1,6 +1,6 @@
 <script>
   import { onDestroy } from 'svelte';
-  import { commit, resetAll, say, store } from './chart.svelte.js';
+  import { commit, resetAll, say, SITENAMES, store } from './chart.svelte.js';
   import { createRecognizer } from './recognizer.js';
 
   let engine = $state('web');
@@ -55,17 +55,18 @@
     <span>{store.status}</span>
   </div>
   <div class="meta">
-    <span>Tooth {store.cur.t} site {store.cur.s + 1}/6</span>
+    <span>Tooth {store.cur.t} · {SITENAMES[store.cur.s]} ({store.cur.s + 1}/6)</span>
     <span>{teethDone}/32 teeth</span>
     {#if store.latencyMs !== null}<span>{store.latencyMs.toFixed(0)}ms parse+render</span>{/if}
   </div>
 
+  <div class="legend">MB mesiobuccal · B buccal · DB distobuccal · ML mesiolingual · L lingual · DL distolingual</div>
   <div id="grid">
     {#each Object.entries(store.teeth) as [t, sites] (t)}
       <div class="t" class:cur={+t === store.cur.t}>
         <b>{t}</b><br />
         {#each sites as v, s (s)}
-          <span class={cellClass(v, store.bleed[t][s])}>{v ?? '.'}</span>
+          <span class={cellClass(v, store.bleed[t][s])} title={`${t} ${SITENAMES[s]}`}>{v ?? '.'}</span>
         {/each}
       </div>
     {/each}

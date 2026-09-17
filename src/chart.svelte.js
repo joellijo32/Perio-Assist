@@ -1,4 +1,6 @@
-import { createState, parseInto } from './perio.js';
+import { createState, parseInto, SITENAMES } from './perio.js';
+
+export { SITENAMES };
 
 // ponytail: one shared reactive store - components read it directly, no prop drilling
 
