@@ -179,4 +179,9 @@ assert.equal(n.teeth[25].every((v) => v === null), true, 'overgrowth never a dep
 assert.equal(parseInto(n, 'tooth 7 buccal 15-2-2').hint?.length > 0, true, 'range hint');
 assert.equal(parseInto(createState(), '').hint, 'empty input', 'empty hint');
 assert.match(parseInto(createState(), 'hello world').hint ?? '', /no clinical data/, 'prose hint');
+// site-targeted dictation binds immediately - trailing value must not spill to next tooth
+const b = createState();
+parseInto(b, 'B 1 DB 2 ML 3 L 4 DL 5 MB 6');
+assert.deepEqual(b.teeth[1], [6, 1, 2, 3, 4, 5], 'site-value pairs stay on tooth 1');
+assert.deepEqual(b.teeth[2], [null, null, null, null, null, null], 'no spill onto tooth 2');
 console.log('perio.test ok');

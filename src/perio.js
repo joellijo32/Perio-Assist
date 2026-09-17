@@ -284,8 +284,32 @@ export function parseInto(state, text) {
     if (bare) {
       // ponytail: lone mesial/distal with no announced side is a guess - ask instead of charting wrong
       const lone = (toks[i] === 'mesial' || toks[i] === 'distal') && bare[1] === i + 1;
-      if (lone && !state.aspectSet) hint ??= `${toks[i]} - facial or lingual?`;
-      else { flush(); state.cur.s = bare[0]; state.overflowed = false; i = bare[1] - 1; }
+      if (lone && !state.aspectSet) {
+        hint ??= `${toks[i]} - facial or lingual?`;
+        continue;
+      }
+      flush();
+      // ponytail: backtrack ("DL 5 MB 6") - fresh wrap + hole behind means same tooth, not next
+      if (
+        state.overflowed &&
+        state.cur.s === 0 &&
+        state.cur.t > 1 &&
+        state.teeth[state.cur.t]?.every((v) => v === null) &&
+        state.teeth[state.cur.t - 1]?.[bare[0]] == null
+      ) {
+        state.cur.t--;
+      }
+      state.cur.s = bare[0];
+      state.overflowed = false;
+      // ponytail: "MB 6" binds now - a buffered trailing value would spill past tooth end
+      const bv = toNum(toks[bare[1]]);
+      if (bv != null && bv >= 0 && bv <= 12) {
+        patchDepth(state, state.cur.t, bare[0], bv);
+        state.last = [bv];
+        i = bare[1];
+        continue;
+      }
+      i = bare[1] - 1;
       continue;
     }
     if (w === 'make') {
