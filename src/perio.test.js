@@ -184,4 +184,26 @@ const b = createState();
 parseInto(b, 'B 1 DB 2 ML 3 L 4 DL 5 MB 6');
 assert.deepEqual(b.teeth[1], [6, 1, 2, 3, 4, 5], 'site-value pairs stay on tooth 1');
 assert.deepEqual(b.teeth[2], [null, null, null, null, null, null], 'no spill onto tooth 2');
+// undo restores tooth status, not just readings
+const u = createState();
+parseInto(u, 'tooth 28 is missing');
+assert.equal(u.absent[28], 'MISSING', 'marked');
+parseInto(u, 'undo');
+assert.equal(u.absent[28], undefined, 'undo unmarks');
+parseInto(u, 'jump 27');
+parseInto(u, 'missing');
+assert.equal(u.absent[27], 'MISSING', 'bare marked');
+parseInto(u, 'undo');
+assert.equal(u.absent[27], undefined, 'bare undo unmarks');
+// lone value names its site: "5 B 3 B" replaces within B, MB untouched
+const c = createState();
+parseInto(c, 'jump 12');
+parseInto(c, '5 B 3 B');
+assert.equal(c.teeth[12][0], null, 'MB untouched');
+assert.equal(c.teeth[12][1], 3, 'B replaced, not adjoined');
+// multi-value buffers stay sequential past a site word, explicit bind wins
+const d = createState();
+parseInto(d, 'jump 13');
+parseInto(d, '3 2 B 4');
+assert.deepEqual(d.teeth[13].slice(0, 2), [3, 4], 'triplet flow kept, B corrected to 4');
 console.log('perio.test ok');

@@ -160,7 +160,10 @@ function restore(state, h, moveCursor = true) {
   if (h.kind === 'bleed') state.bleed[h.t][h.s] = false;
   else if (h.kind === 'rec') state.rec[h.t][h.s] = h.prev ?? 0;
   else if (h.kind === 'sup') state.sup[h.t][h.s] = false;
-  else state.teeth[h.t][h.s] = h.prev ?? null;
+  else if (h.kind === 'absent') {
+    if (h.prev == null) delete state.absent[h.t];
+    else state.absent[h.t] = h.prev;
+  } else state.teeth[h.t][h.s] = h.prev ?? null;
   if (moveCursor) state.cur = { t: h.t, s: h.s };
 }
 
@@ -288,7 +291,13 @@ export function parseInto(state, text) {
         hint ??= `${toks[i]} - facial or lingual?`;
         continue;
       }
-      flush();
+      if (nums.length === 1) {
+        // ponytail: "5 B" names the value's site ("five... B") - multi-value buffers stay sequential
+        const v = nums.pop();
+        state.hist.push({ t: state.cur.t, s: bare[0], kind: 'depth', prev: state.teeth[state.cur.t][bare[0]] });
+        state.teeth[state.cur.t][bare[0]] = v;
+        state.last = [v];
+      } else flush();
       // ponytail: backtrack ("DL 5 MB 6") - fresh wrap + hole behind means same tooth, not next
       if (
         state.overflowed &&
@@ -507,7 +516,10 @@ export function parseInto(state, text) {
       state.aspectSet = false;
       k = skipFiller(toks, k); // "tooth 5 is missing" / "are missing"
       if (toks[k] === 'missing' || toks[k] === 'implant') {
-        for (const t of listed) state.absent[t] = toks[k].toUpperCase();
+        for (const t of listed) {
+          state.hist.push({ t, s: 0, kind: 'absent', prev: state.absent[t] ?? null });
+          state.absent[t] = toks[k].toUpperCase();
+        }
         i = k;
         // ponytail: land, don't skip - implants carry charting; sequential flow skips via advance/next
       } else i = k - 1;
@@ -515,6 +527,7 @@ export function parseInto(state, text) {
     }
     if (w === 'missing' || w === 'implant') {
       flush();
+      state.hist.push({ t: state.cur.t, s: 0, kind: 'absent', prev: state.absent[state.cur.t] ?? null });
       state.absent[state.cur.t] = w.toUpperCase();
       continue;
     }
