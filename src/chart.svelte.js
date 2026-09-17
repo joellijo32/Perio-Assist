@@ -33,7 +33,8 @@ export function resetAll() {
   store.last = fresh.last;
   store.hist = fresh.hist;
   store.groups = fresh.groups;
-  store.status = fresh.status;
+  store.absent = fresh.absent;
+  store.status = 'Idle. Pick an engine and press Start.';
   store.rec = fresh.rec;
   store.aspect = fresh.aspect;
   store.aspectSet = fresh.aspectSet;

@@ -66,7 +66,8 @@ export function createState() {
     teeth: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(null)])),
     bleed: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(false)])),
     rec: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(0)])),
-    status: {},
+    // ponytail: tooth map, NOT the UI message - store.status is a string, indexing it marches 1->32
+    absent: {},
     aspect: 'facial',
     aspectSet: false,
     cur: { t: 1, s: 0 },
@@ -77,7 +78,7 @@ export function createState() {
 }
 
 function skipAbsent(state) {
-  while (state.status[state.cur.t] && state.cur.t < 32) { state.cur.t++; state.cur.s = 0; }
+  while (state.absent[state.cur.t] && state.cur.t < 32) { state.cur.t++; state.cur.s = 0; }
 }
 
 function advance(state, n = 1) {
@@ -227,7 +228,7 @@ export function parseInto(state, text) {
       state.aspectSet = false;
       let k = skipFiller(toks, r[1]); // "tooth 5 is missing"
       if (toks[k] === 'missing' || toks[k] === 'implant') {
-        state.status[r[0]] = toks[k].toUpperCase();
+        state.absent[r[0]] = toks[k].toUpperCase();
         i = k;
         skipAbsent(state);
       } else i = r[1] - 1;
@@ -235,7 +236,7 @@ export function parseInto(state, text) {
     }
     if (w === 'missing' || w === 'implant') {
       flush();
-      state.status[state.cur.t] = w.toUpperCase();
+      state.absent[state.cur.t] = w.toUpperCase();
       skipAbsent(state);
       continue;
     }

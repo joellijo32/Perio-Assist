@@ -63,8 +63,8 @@
   <div class="legend">MB mesiobuccal · B buccal · DB distobuccal · ML mesiolingual · L lingual · DL distolingual · dotted top = recession · * = missing/implant</div>
   <div id="grid">
     {#each Object.entries(store.teeth) as [t, sites] (t)}
-      <div class="t" class:cur={+t === store.cur.t} class:miss={!!store.status[t]}>
-        <b>{t}{store.status[t] ? '*' : ''}</b><br />
+      <div class="t" class:cur={+t === store.cur.t} class:miss={!!store.absent[t]}>
+        <b>{t}{store.absent[t] ? '*' : ''}</b><br />
         {#each sites as v, s (s)}
           <span
             class={cellClass(v, store.bleed[t][s], store.rec[t][s])}

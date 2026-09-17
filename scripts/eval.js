@@ -26,8 +26,8 @@ for (let p = 0; p < patients; p++) {
   for (const [id, t] of Object.entries(truth)) {
     if (t.sites === null || t.sites === undefined) {
       stats++;
-      if ((state.status ?? {})[id] === t.status) statHit++;
-      else if (misses.length < 8) misses.push(`T${id}: status ${t.status}, got ${(state.status ?? {})[id] ?? 'PRESENT'}`);
+      if ((state.absent ?? {})[id] === t.status) statHit++;
+      else if (misses.length < 8) misses.push(`T${id}: status ${t.status}, got ${(state.absent ?? {})[id] ?? 'PRESENT'}`);
       continue;
     }
     for (let s = 0; s < 6; s++) {

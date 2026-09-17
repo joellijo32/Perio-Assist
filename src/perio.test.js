@@ -103,7 +103,7 @@ assert.equal(s.teeth[27][5], 2, 'correction on site');
 assert.deepEqual(s.cur, { t: 27, s: 3 }, 'correction keeps cursor');
 // missing teeth are flagged and skipped
 parseInto(s, 'tooth 28 is missing');
-assert.equal(s.status[28], 'MISSING', 'missing status');
+assert.equal(s.absent[28], 'MISSING', 'missing status');
 assert.equal(s.cur.t, 29, 'missing skipped');
 // recession stores on the site just called, never as a depth
 parseInto(s, 'jump 30');
@@ -134,4 +134,9 @@ assert.equal(parseInto(s2, '3 2 3').hint, null, 'no hint on plain input');
 parseInto(s2, 'lingual');
 parseInto(s2, 'mesial');
 assert.equal(s2.cur.s, 3, 'mesial resolves once lingual announced');
+// app wiring: a UI status string on the same object must not affect navigation (was: 1->32)
+const s3 = createState();
+s3.status = 'Listening: speak triplets like "three two three".';
+parseInto(s3, '3 2 3');
+assert.deepEqual(s3.cur, { t: 1, s: 3 }, 'status string ignored by advance');
 console.log('perio.test ok');
