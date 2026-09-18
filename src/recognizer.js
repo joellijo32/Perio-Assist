@@ -1,14 +1,8 @@
 // ponytail: two engines behind one start/stop - CDN Vosk global, swap to npm import if bundling matters
-const GRAMMAR = JSON.stringify([
-  'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty',
-  'bleeding bleed blood bop drop repeat jump go next back skip miss missing clear scratch undo tooth',
-  'mb b db ml l dl mesiobuccal buccal distobuccal mesiolingual lingual distolingual mesial distal at on',
-  'implant millimeter millimeters recession facial lingual correction change make last',
-  'mid all throughout no not without some any midbuccal probing noted',
-  'upper lower left right first second third molar premolar bicuspid canine cuspid lateral central wisdom',
-  'mobility slight moderate severe furcation suppuration miller fdi teeth number through thru and are class',
-  '[unk]',
-]);
+// grammar lives in grammar.json (single source - the acoustic harness reads the same file)
+import GRAMMAR_WORDS from './grammar.json';
+
+const GRAMMAR = JSON.stringify(GRAMMAR_WORDS);
 
 export function createRecognizer({ onPartial, onFinal, onStatus, onStop }) {
   let web = null;

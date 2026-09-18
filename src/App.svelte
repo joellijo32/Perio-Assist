@@ -3,7 +3,7 @@
   import { commit, resetAll, say, SITENAMES, store } from './chart.svelte.js';
   import { createRecognizer } from './recognizer.js';
 
-  let engine = $state('web');
+  let engine = $state('vosk');
   let draft = $state('');
 
   const teethDone = $derived(
@@ -51,10 +51,7 @@
   <h1>Voice Perio</h1>
   <div class="controls">
     <button onclick={toggle}>{store.listening ? 'Stop' : 'Start'}</button>
-    <select bind:value={engine} disabled={store.listening}>
-      <option value="web">Web Speech (cloud)</option>
-      <option value="vosk">Vosk on-device</option>
-    </select>
+    Vosk on-device
     <button onclick={resetAll} disabled={store.listening}>Reset</button>
     <span>{store.status}</span>
   </div>

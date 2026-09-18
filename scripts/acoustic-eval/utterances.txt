@@ -1,0 +1,41 @@
+# id | speakable text (TTS input; reference = this, lowercased)
+t01 | three two three
+t02 | four five four bleeding
+t03 | two two two
+t04 | twelve eleven ten
+t05 | m b six
+t06 | bleeding
+t07 | distal buccal
+t08 | mesiobuccal
+t09 | distolingual
+t10 | repeat
+t11 | jump twelve
+t12 | go to twenty four
+t13 | undo
+t14 | clear
+t15 | next
+t16 | skip
+t17 | change last to five
+t18 | make the mesial a one
+t19 | tooth twelve
+t20 | tooth twenty eight is missing
+t21 | two millimeters recession
+t22 | mobility two
+t23 | no bleeding
+t24 | bleeding on buccal
+t25 | bleeding all
+t26 | suppuration at mid buccal
+t27 | furcation class two on buccal
+t28 | upper right first molar
+t29 | no mobility
+t30 | three two three bleeding
+t31 | jump twenty four
+t32 | go to tooth five
+t33 | correction two on distal
+t34 | back
+t35 | scratch that
+t36 | buccal two three two
+t37 | lingual three two three
+t38 | missing
+t39 | implant
+t40 | seven eight six

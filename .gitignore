@@ -1,3 +1,8 @@
 node_modules/
 dist/
 __pycache__/
+public/model.small-backup.tar.gz
+scripts/acoustic-eval/.venv/
+scripts/acoustic-eval/models/
+scripts/acoustic-eval/fixtures/
+scripts/acoustic-eval/results.json
