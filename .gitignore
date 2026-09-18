@@ -8,3 +8,11 @@ scripts/acoustic-eval/fixtures/
 scripts/acoustic-eval/fixtures_long/
 scripts/acoustic-eval/results.json
 scripts/acoustic-eval/samples/
+testing/acoustic-eval/.kokoro/
+testing/acoustic-eval/models/
+testing/acoustic-eval/fixtures/
+testing/acoustic-eval/fixtures_long/
+testing/acoustic-eval/results.json
+testing/acoustic-eval/results_long.json
+testing/acoustic-eval/samples/
+.~lock.*#

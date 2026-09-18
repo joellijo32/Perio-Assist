@@ -1,0 +1,14 @@
+# id | speakable text (TTS input; reference = this, lowercased)
+# hackathon subset: 12 utterances covering digits, mb, commands, clinical terms, status
+t01 | three two three
+t02 | four five four bleeding
+t04 | twelve eleven ten
+t05 | m b six
+t10 | repeat
+t13 | undo
+t20 | tooth twenty eight is missing
+t22 | mobility two
+t26 | suppuration at mid buccal
+t27 | furcation class two on buccal
+t38 | missing
+t40 | seven eight six
