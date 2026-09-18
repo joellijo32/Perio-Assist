@@ -9,15 +9,18 @@ import os
 import re
 import sys
 import tarfile
+import time
 import wave
 
 import numpy as np
 from vosk import KaldiRecognizer, Model
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-FIX = os.path.join(BASE, sys.argv[1] if len(sys.argv) > 1 else 'fixtures')
-UTTERANCES = os.path.join(BASE, sys.argv[2] if len(sys.argv) > 2 else 'utterances.txt')
-RESULTS = os.path.join(BASE, sys.argv[3] if len(sys.argv) > 3 else 'results.json')
+LATENCY = '--latency' in sys.argv
+_args = [a for a in sys.argv[1:] if not a.startswith('--')]
+FIX = os.path.join(BASE, _args[0] if len(_args) > 0 else 'fixtures')
+UTTERANCES = os.path.join(BASE, _args[1] if len(_args) > 1 else 'utterances.txt')
+RESULTS = os.path.join(BASE, _args[2] if len(_args) > 2 else 'results.json')
 MODEL_TAR = os.path.join(BASE, '..', '..', 'public', 'model.tar.gz')
 MODEL_DIR = os.path.join(BASE, 'models', 'active')
 
@@ -133,6 +136,7 @@ def main():
     results = []
     tot_e = tot_n = dig_e = dig_n = 0
     per_profile = {}
+    per_profile_lat = {}
     wavs = sorted(f for f in os.listdir(FIX) if f.endswith('.wav'))
     for idx, fname in enumerate(wavs, 1):
         print(f'[{idx}/{len(wavs)}] {fname}', flush=True)
@@ -144,9 +148,20 @@ def main():
             y = add_noise(x, rng=rng, **prof) if prof else x
             rec.Reset()
             data = y.astype(np.int16).tobytes()
+            # ponytail: --latency paces feed to real mic timing (16000 samples/s, 2 bytes/sample)
+            # so only the tail after the last real-time chunk - the part a speaker actually waits
+            # on - counts as latency; unpaced, decode of earlier chunks would pad the number
+            t0 = time.perf_counter()
             for off in range(0, len(data), 6400):
+                if LATENCY:
+                    wait = (t0 + off / 32000) - time.perf_counter()
+                    if wait > 0:
+                        time.sleep(wait)
                 rec.AcceptWaveform(data[off : off + 6400])
+            t_spoken = time.perf_counter()
             hyp = json.loads(rec.FinalResult()).get('text', '')
+            if LATENCY:
+                per_profile_lat.setdefault(pname, []).append((time.perf_counter() - t_spoken) * 1000)
             e, n = wer(ref, hyp)
             r, h = norm_text(ref), norm_text(hyp)
             de = dn = 0
@@ -170,6 +185,12 @@ def main():
     print(f'overall WER {tot_e}/{tot_n} = {100 * tot_e / max(tot_n, 1):.1f}%   digits {dig_e}/{dig_n} = {100 * dig_e / max(dig_n, 1):.1f}%')
     for pname, (pe, pn, pde, pdn) in per_profile.items():
         print(f'  {pname:8s} WER {pe}/{pn} = {100 * pe / max(pn, 1):.1f}%   digits {pde}/{pdn} = {100 * pde / max(pdn, 1):.1f}%')
+    if LATENCY:
+        print('latency: time from last spoken chunk to FinalResult() (real-time-paced feed)')
+        for pname, lats in per_profile_lat.items():
+            s = sorted(lats)
+            p = lambda q: s[min(len(s) - 1, int(q * len(s)))]
+            print(f'  {pname:8s} n={len(s)} avg={sum(s) / len(s):.1f}ms p50={p(0.5):.1f}ms p95={p(0.95):.1f}ms max={s[-1]:.1f}ms')
 
 
 if __name__ == '__main__':

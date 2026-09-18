@@ -33,7 +33,6 @@ BLEED_PHRASES = [
 # "the/a/to/wait/that/positive" aren't decodable, so a reference containing them
 # is unscoreable WER, not filler the recognizer politely ignores.
 CORRECTION_TEMPLATES = [
-    "undo {site} {val}",
     "correction {val} on {site}",
     "change last {val}",
     "make {val}",

@@ -20,8 +20,9 @@ run "[3/3] synthetic chart eval (seed=1, 10 patients, 16 teeth)" \
 
 echo ""
 echo "=== acoustic eval: SKIP ==="
-echo "  WAV fixtures require macOS say+afconvert (synth.py)."
-echo "  On Linux: swap say/afconvert for espeak-ng+sox in synth.py, then:"
+echo "  Needs one-time model downloads (Kokoro TTS + Vosk), not run automatically:"
+echo "    ./scripts/setup.sh                       # Vosk ASR model"
+echo "    ./testing/acoustic-eval/setup.sh          # Kokoro TTS model"
 echo "    python3 testing/acoustic-eval/synth.py"
 echo "    python3 testing/acoustic-eval/run.py"
 echo "    node   testing/acoustic-eval/chartmatch.js"
