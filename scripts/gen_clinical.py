@@ -13,6 +13,12 @@ NUMBER_WORDS = {
 DEPTH_WEIGHTS = [1, 2, 3, 4, 5, 6, 7, 8]
 DEPTH_PROBS   = [0.10, 0.45, 0.30, 0.08, 0.04, 0.015, 0.01, 0.005]
 
+SUP_RATE = 0.05  # per site; only emitted when depth >= 4
+
+MOB_GRADES = [0, 1, 2, 3]
+MOB_PROBS  = [0.82, 0.10, 0.06, 0.02]  # ~18% have some mobility
+MOB_WORDS  = {1: ["mobility one", "slight mobility"], 2: ["mobility two"], 3: ["mobility three", "severe mobility"]}
+
 SITES_ORDER = ["MF", "F", "DF", "ML", "L", "DL"]
 SITE_NAMES = {
     "DF": "distal", "F": "facial", "MF": "mesial",
@@ -74,8 +80,8 @@ def generate_patient_chart(
             ground_truth[tooth_id] = {"status": status.upper(), "sites": None}
             continue
 
-        ground_truth[tooth_id] = {"status": "PRESENT", "sites": {}}
-        
+        ground_truth[tooth_id] = {"status": "PRESENT", "sites": {}, "mobility": 0}
+
         # Announce tooth (explicit only: bare numbers are ambiguous with depths)
         styles = [f"tooth {tooth_id}", f"number {tooth_id}"]
         if not explicit_prefix:
@@ -115,14 +121,26 @@ def generate_patient_chart(
                 if recession > 0 and random.random() < 0.7:
                     entry_phrase += f", {format_number(recession)} millimeters recession"
 
+                # Append suppuration (only plausible with deeper pockets)
+                sup = depth >= 4 and random.random() < SUP_RATE
+                if sup:
+                    entry_phrase += f", suppuration at {site_word}"
+
                 current_tooth_tokens.append(entry_phrase)
 
                 # Store ground-truth state
                 ground_truth[tooth_id]["sites"][site_code] = {
                     "depth_mm": depth,
                     "bleeding": bleed,
-                    "recession_mm": recession
+                    "recession_mm": recession,
+                    "suppuration": sup,
                 }
+
+        # Mobility (per tooth, appended after both aspects to avoid depth interference)
+        mob = random.choices(MOB_GRADES, weights=MOB_PROBS, k=1)[0]
+        ground_truth[tooth_id]["mobility"] = mob
+        if mob > 0:
+            current_tooth_tokens.append(random.choice(MOB_WORDS[mob]))
 
         # Occasional operatory noise between teeth
         if random.random() < noise_rate:

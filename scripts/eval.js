@@ -9,7 +9,7 @@ const patients = Number(process.argv[3] ?? '3');
 const teeth = Number(process.argv[4] ?? '8');
 
 let depths = 0, depthHit = 0, bleeds = 0, bleedHit = 0;
-let recs = 0, recHit = 0, stats = 0, statHit = 0;
+let recs = 0, recHit = 0, sups = 0, supHit = 0, mobs = 0, mobHit = 0, stats = 0, statHit = 0;
 const misses = [];
 
 for (let p = 0; p < patients; p++) {
@@ -41,6 +41,14 @@ for (let p = 0; p < patients; p++) {
       recs++;
       if ((state.rec?.[id]?.[s] ?? 0) === g.recession_mm) recHit++;
       else if (misses.length < 8) misses.push(`T${id}[${s}]: rec ${g.recession_mm}, got ${state.rec?.[id]?.[s] ?? 0}`);
+      sups++;
+      if (!!state.sup?.[id]?.[s] === g.suppuration) supHit++;
+      else if (misses.length < 8) misses.push(`T${id}[${s}]: sup ${g.suppuration}, got ${!!state.sup?.[id]?.[s]}`);
+    }
+    if (t.mobility !== undefined) {
+      mobs++;
+      if ((state.mob?.[id] ?? 0) === t.mobility) mobHit++;
+      else if (misses.length < 8) misses.push(`T${id}: mob ${t.mobility}, got ${state.mob?.[id] ?? 0}`);
     }
   }
 }
@@ -48,5 +56,6 @@ for (let p = 0; p < patients; p++) {
 const pct = (h, n) => (n ? ((100 * h) / n).toFixed(1) : 'n/a');
 console.log(`patients=${patients} teeth~${teeth} seed=${seed}`);
 console.log(`depth ${depthHit}/${depths} (${pct(depthHit, depths)}%)  bleed ${bleedHit}/${bleeds} (${pct(bleedHit, bleeds)}%)`);
-console.log(`rec ${recHit}/${recs} (${pct(recHit, recs)}%)  status ${statHit}/${stats} (${pct(statHit, stats)}%)`);
+console.log(`rec ${recHit}/${recs} (${pct(recHit, recs)}%)  sup ${supHit}/${sups} (${pct(supHit, sups)}%)`);
+console.log(`mob ${mobHit}/${mobs} (${pct(mobHit, mobs)}%)  status ${statHit}/${stats} (${pct(statHit, stats)}%)`);
 for (const m of misses) console.log('  miss:', m);
