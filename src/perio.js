@@ -183,10 +183,17 @@ function condTooth(state, hadPending) {
 // ponytail: one restore path for clear + undo - hist kinds stay in one place
 function restore(state, h, moveCursor = true) {
   if (!h) return;
-  if (h.kind === 'bleed') state.bleed[h.t][h.s] = false;
+  if (h.kind === 'bleed') state.bleed[h.t][h.s] = h.prev ?? false;
   else if (h.kind === 'rec') state.rec[h.t][h.s] = h.prev ?? 0;
-  else if (h.kind === 'sup') state.sup[h.t][h.s] = false;
-  else if (h.kind === 'plaque') state.plaque[h.t][h.s] = false;
+  else if (h.kind === 'sup') state.sup[h.t][h.s] = h.prev ?? false;
+  else if (h.kind === 'plaque') state.plaque[h.t][h.s] = h.prev ?? false;
+  else if (h.kind === 'mob') {
+    if (h.prev == null) delete state.mob[h.t];
+    else state.mob[h.t] = h.prev;
+  } else if (h.kind === 'fur') {
+    if (h.prev == null) delete state.fur[h.t];
+    else state.fur[h.t] = h.prev;
+  }
   else if (h.kind === 'absent') {
     if (h.prev == null) delete state.absent[h.t];
     else state.absent[h.t] = h.prev;
@@ -228,6 +235,34 @@ const NEG_SET = new Set(['bleeding', 'bleed', 'blood', 'bop', 'drop', 'mobility'
 function skipFiller(toks, j) {
   while (FILLER.has(toks[j])) j++;
   return j;
+}
+
+// ponytail: whole-tooth wipe keeps prev per entry - one group, so one undo restores all
+function clearTooth(state, t) {
+  for (let s = 0; s < 6; s++) {
+    if (state.teeth[t][s] != null) {
+      state.hist.push({ t, s, kind: 'depth', prev: state.teeth[t][s] });
+      state.teeth[t][s] = null;
+    }
+    for (const [field, kind] of [[state.bleed, 'bleed'], [state.sup, 'sup'], [state.plaque, 'plaque']]) {
+      if (field[t][s]) {
+        state.hist.push({ t, s, kind, prev: true });
+        field[t][s] = false;
+      }
+    }
+    if (state.rec[t][s]) {
+      state.hist.push({ t, s, kind: 'rec', prev: state.rec[t][s] });
+      state.rec[t][s] = 0;
+    }
+  }
+  if (state.mob[t] != null) {
+    state.hist.push({ t, s: 0, kind: 'mob', prev: state.mob[t] });
+    delete state.mob[t];
+  }
+  if (state.fur[t]) {
+    state.hist.push({ t, s: 0, kind: 'fur', prev: state.fur[t] });
+    delete state.fur[t];
+  }
 }
 
 function shrinkGroup(state) {
@@ -329,7 +364,9 @@ export function parseInto(state, text) {
             let m = skipFiller(toks, kk + 1);
             if (toks[m] === 'on' || toks[m] === 'at') m = skipFiller(toks, m + 1);
             const side = SIDEWORDS.has(toks[m]) ? toks[m] : null;
-            state.fur[condTooth(state, hadPending)] = { grade: g, side };
+            const ft = condTooth(state, hadPending);
+            state.hist.push({ t: ft, s: 0, kind: 'fur', prev: state.fur[ft] ?? null });
+            state.fur[ft] = { grade: g, side };
             stored = true;
             i = (side ? m + 1 : kk + 1) - 1;
             continue;
@@ -476,6 +513,7 @@ export function parseInto(state, text) {
         const side = SIDEWORDS.has(toks[k]) ? toks[k] : null;
         if (v >= 1 && v <= 3) {
           const t = condTooth(state, hadPending);
+          state.hist.push({ t, s: 0, kind: 'fur', prev: state.fur[t] ?? null });
           state.fur[t] = { grade: v, side };
           stored = true;
         }
@@ -497,6 +535,7 @@ export function parseInto(state, text) {
       if (toks[k] === 'on' || toks[k] === 'at') k = skipFiller(toks, k + 1);
       const side = toks[k] in ROWS || (toks[k] && toks[k] in SITES) ||
         toks[k] === 'mesial' || toks[k] === 'distal' ? toks[k] : null;
+      state.hist.push({ t, s: 0, kind: 'fur', prev: state.fur[t] ?? null });
       state.fur[t] = { grade: v, side };
       stored = true;
       i = (side ? k + 1 : j + 1) - 1;
@@ -508,7 +547,9 @@ export function parseInto(state, text) {
       const j = skipFiller(toks, i + 1);
       const v = toNum(toks[j]) ?? MOB_ADJ[toks[i - 1]];
       if (v != null && v <= 3) {
-        state.mob[condTooth(state, hadPending)] = v;
+        const t = condTooth(state, hadPending);
+        state.hist.push({ t, s: 0, kind: 'mob', prev: state.mob[t] ?? null });
+        state.mob[t] = v;
         stored = true;
         if (toNum(toks[j]) != null) i = j;
       } else hint ??= 'mobility mentioned but no grade heard';
@@ -528,6 +569,7 @@ export function parseInto(state, text) {
           let m = skipFiller(toks, kk + 1);
           if (toks[m] === 'on' || toks[m] === 'at') m = skipFiller(toks, m + 1);
           const side = SIDEWORDS.has(toks[m]) ? toks[m] : null;
+          state.hist.push({ t, s: 0, kind: 'fur', prev: state.fur[t] ?? null });
           state.fur[t] = { grade: g, side };
           stored = true;
           i = (side ? m + 1 : kk + 1) - 1;
@@ -778,6 +820,19 @@ export function parseInto(state, text) {
     }
     if (w === 'clear' || w === 'scratch') {
       flush();
+      // ponytail: "clear tooth 14" wipes the whole tooth (status kept) - one group, one undo
+      let j = skipFiller(toks, i + 1);
+      if (toks[j] === 'tooth') {
+        const r = resolveTooth(toks, j + 1);
+        const t = r ? r[0] : state.cur.t;
+        clearTooth(state, t);
+        state.cur = { t, s: 0 };
+        state.aspect = 'facial';
+        state.aspectSet = false;
+        state.overflowed = false;
+        i = r ? r[1] - 1 : j;
+        continue;
+      }
       const own = state.hist.length > mark;
       const h = state.hist.pop();
       if (h) undone = true;

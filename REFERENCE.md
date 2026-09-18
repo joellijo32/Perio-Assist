@@ -124,6 +124,8 @@ Grades are consumed as grades, never depths.
 - `correction 5 on mesial` — patch a site (site optional -> last depth)
 - `repeat` — re-enter the last set of values
 - `clear` / `scratch` — take back the single last entry
+- `clear tooth` / `clear tooth 14` — wipe the whole tooth (status kept),
+  cursor parks for re-charting; one `undo` restores everything
 - `undo` — take back the whole last utterance
 
 ## Negation
