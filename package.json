@@ -10,6 +10,7 @@
     "test": "node src/perio.test.js",
     "eval": "node scripts/eval.js",
     "cases": "node scripts/cases.js",
+    "acoustic": "scripts/acoustic-eval/.venv/bin/python scripts/acoustic-eval/run.py && node scripts/acoustic-eval/chartmatch.js",
     "setup": "./scripts/setup.sh"
   },
   "devDependencies": {
