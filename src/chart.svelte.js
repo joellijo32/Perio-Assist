@@ -1,4 +1,5 @@
 import { createState, parseInto, SITENAMES } from './perio.js';
+import { buildReport, downloadJson, reportFilename } from './export.js';
 
 export { SITENAMES };
 
@@ -17,6 +18,21 @@ export const store = $state({
 export const preview = $state({ teeth: null, bleed: null, cur: null });
 
 let nextId = 1;
+
+// ponytail: live-chart export only - saved-patient lookup lives on feature/client-db, not here
+const EXPORT_KEYS = ['teeth', 'bleed', 'rec', 'sup', 'plaque', 'mob', 'fur', 'absent'];
+
+export function exportActiveJson(liveName = '') {
+  const chart = JSON.parse(JSON.stringify(Object.fromEntries(EXPORT_KEYS.map((k) => [k, store[k]]))));
+  const done = Object.values(chart.teeth).filter((s) => s.some((v) => v !== null)).length;
+  if (!done) { store.status = 'Nothing to export — chart first.'; return null; }
+  const name = liveName.trim() || 'unsaved';
+  const report = buildReport({ name, chart, id: null, updatedAt: null });
+  const file = reportFilename(name);
+  downloadJson(report, file);
+  store.status = `Exported ${file}.`;
+  return report;
+}
 
 export function say(text, final) {
   store.transcript.unshift({ id: nextId++, text, final });

@@ -1,11 +1,12 @@
 <script>
   import { onDestroy } from 'svelte';
-  import { commit, previewPartial, resetAll, say, SITENAMES, store } from './chart.svelte.js';
+  import { commit, exportActiveJson, previewPartial, resetAll, say, SITENAMES, store } from './chart.svelte.js';
   import { createRecognizer } from './recognizer.js';
   import PerioChart from './PerioChart.svelte';
 
   let engine = $state('vosk');
   let draft = $state('');
+  let name = $state('');
 
   const teethDone = $derived(
     Object.values(store.teeth).filter((sites) => sites.some((v) => v !== null)).length,
@@ -84,6 +85,8 @@
     <button onclick={toggle}>{store.listening ? 'Stop' : 'Start'}</button>
     Vosk on-device
     <button onclick={resetAll} disabled={store.listening}>Reset</button>
+    <input class="name" bind:value={name} placeholder="Client name" />
+    <button onclick={() => exportActiveJson(name)}>Export</button>
     <span>{store.status}</span>
   </div>
   <div class="meta">
@@ -116,6 +119,7 @@
   .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .meta { display: flex; gap: 16px; margin: 8px 0; flex-wrap: wrap; }
   input { width: 100%; padding: 8px; box-sizing: border-box; }
+  input.name { width: 160px; }
   #tx { border: 1px solid #ddd; min-height: 60px; padding: 8px; margin-top: 8px; }
   .i { opacity: 0.5; font-style: italic; }
 </style>
