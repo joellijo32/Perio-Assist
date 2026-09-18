@@ -99,18 +99,23 @@ export function createRecognizer({ onPartial, onFinal, onStatus, onStop }) {
     // ponytail: full teardown around TTS, not muting - while our voice plays no recognizer
     // exists, so nothing can be misrecognized; mic stream and model stay warm for fast resume
     pause() {
+      // ponytail: returns whether anything was actually torn down - TTS speaks only on true
+      let did = false;
       paused = true;
       if (web) {
         suppressEnd = true;
         try { web.stop(); } catch { /* already stopped */ }
         web = null;
         webPaused = true;
+        did = true;
       }
       if (vosk) {
         try { vosk.rec.remove(); } catch { /* noop */ }
         vosk.rec = null;
         vosk.active = false;
+        did = true;
       }
+      return did;
     },
     async resume() {
       if (!paused) return true;

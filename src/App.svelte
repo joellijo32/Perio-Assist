@@ -100,34 +100,47 @@
     try { localStorage.setItem('voice-perio.speak', v ? '1' : '0'); } catch { /* noop */ }
   }
 
+  // ponytail: at most one summary in flight - the flag flips in the same tick as speak(), never across a timeout
+  let ttsActive = false;
+
   function speakFeedback(phrase, beepMs) {
-    if (!speak || !phrase) return;
+    if (!speak || !phrase || ttsActive) return;
+    let synth = null;
     try {
-      const synth = window.speechSynthesis;
-      // ponytail: one voice at a time - a busy synth means fast dictation; the chime already confirmed it
-      if (!synth || synth.speaking || synth.pending) return;
-      synth.cancel();
-      const u = new SpeechSynthesisUtterance(phrase.slice(0, 140));
-      u.rate = 1.15;
-      u.volume = 0.8;
-      let done = false;
-      const finish = () => {
-        if (done || !store.listening) return;
-        done = true;
-        recognizer.resume().then((ok) => {
-          if (!ok) store.listening = false;
-        });
-      };
-      u.onend = u.onerror = () => finish();
-      setTimeout(() => {
-        try {
-          recognizer.pause();
-          synth.speak(u);
-          const words = phrase.trim().split(/\s+/).length;
-          setTimeout(() => finish(), 1500 + words * 350); // ponytail: onend is flaky - time-boxed fallback
-        } catch { finish(); }
-      }, beepMs);
-    } catch { /* voice feedback unavailable - chimes still play */ }
+      synth = window.speechSynthesis;
+      if (!synth) return;
+    } catch { return; }
+    const u = new SpeechSynthesisUtterance(phrase.slice(0, 140));
+    u.rate = 1.15;
+    u.volume = 0.8;
+    let done = false;
+    let poll = null;
+    const finish = () => {
+      if (done || !store.listening) return;
+      done = true;
+      ttsActive = false;
+      if (poll) clearInterval(poll);
+      recognizer.resume().then((ok) => {
+        if (!ok) store.listening = false;
+      });
+    };
+    u.onend = u.onerror = () => finish();
+    setTimeout(() => {
+      try {
+        // ponytail: teardown must succeed and synth must be idle, or nothing speaks into a live mic
+        if (ttsActive || synth.speaking || synth.pending || !recognizer.pause()) return;
+        ttsActive = true;
+        synth.cancel();
+        synth.speak(u);
+        const speakStart = performance.now();
+        poll = setInterval(() => {
+          // ponytail: speaking reflects engine truth even when events drop - poll, don't estimate
+          try {
+            if (!synth.speaking && performance.now() - speakStart > 800) finish();
+          } catch { finish(); }
+        }, 250);
+      } catch { finish(); }
+    }, beepMs);
   }
 
   const recognizer = createRecognizer({
