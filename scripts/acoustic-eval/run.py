@@ -6,6 +6,7 @@ vs reference through parseInto). Writes results.json for chartmatch.js.
 """
 import json
 import os
+import tarfile
 import wave
 
 import numpy as np
@@ -13,7 +14,22 @@ from vosk import KaldiRecognizer, Model
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 FIX = os.path.join(BASE, 'fixtures')
-MODEL_DIR = os.path.join(BASE, 'models', 'vosk-model-small-en-us-0.15')
+MODEL_TAR = os.path.join(BASE, '..', '..', 'public', 'model.tar.gz')
+MODEL_DIR = os.path.join(BASE, 'models', 'active')
+
+
+def ensure_model():
+    # ponytail: one model source (setup.sh) - extract on first run, harness never ships models
+    if os.path.isdir(MODEL_DIR) and os.listdir(MODEL_DIR):
+        return MODEL_DIR
+    if not os.path.exists(MODEL_TAR):
+        print('missing public/model.tar.gz - run ./scripts/setup.sh first')
+        raise SystemExit(1)
+    with tarfile.open(MODEL_TAR) as t:
+        top = t.getnames()[0].split('/')[0]
+        t.extractall(os.path.join(BASE, 'models'))
+    os.rename(os.path.join(BASE, 'models', top), MODEL_DIR)
+    return MODEL_DIR
 PROFILES = {
     'clean': None,
     'suction': {'snr_db': 10, 'bursts': True},
@@ -85,11 +101,7 @@ def is_digit_tok(t):
 
 
 def main():
-    if not os.path.isdir(MODEL_DIR):
-        print(f'missing model dir {MODEL_DIR}')
-        print('extract it: tar -xzf public/model.tar.gz -C scripts/acoustic-eval/models/')
-        raise SystemExit(1)
-    model = Model(MODEL_DIR)
+    model = Model(ensure_model())
     rec = KaldiRecognizer(model, 16000, GRAMMAR)
     rng = np.random.default_rng(7)
     results = []
