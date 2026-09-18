@@ -330,4 +330,13 @@ assert.deepEqual(st.teeth[12].slice(0, 3), [3, 2, 3], 'stop keeps charted data')
 assert.equal(withStop.stop, true, 'stop flag set');
 assert.equal(parseInto(createState(), 'stop').stop, true, 'bare stop');
 assert.equal(parseInto(createState(), '3 2 3').stop ?? false, false, 'no stop otherwise');
+// parse result carries said events for the TTS echo
+const e = createState();
+const er = parseInto(e, 'jump 12');
+assert.deepEqual(parseInto(e, '3 2 3').said, [
+  { kind: 'depth', t: 12, s: 0, v: 3 },
+  { kind: 'depth', t: 12, s: 1, v: 2 },
+  { kind: 'depth', t: 12, s: 2, v: 3 },
+], 'said depths');
+assert.deepEqual(er.said, [], 'navigation says nothing');
 console.log('perio.test ok');

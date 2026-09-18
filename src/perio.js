@@ -19,6 +19,8 @@ export const SITES = {
   dl: 5, distolingual: 5,
 };
 export const SITENAMES = ['MB', 'B', 'DB', 'ML', 'L', 'DL'];
+// ponytail: spoken site names for TTS echo - full words, never codes ("MB" reads as letters anyway)
+export const SITEWORDS = ['mesiobuccal', 'buccal', 'distobuccal', 'mesiolingual', 'lingual', 'distolingual'];
 const SITE_FILLER = new Set(['at', 'on', 'probing', 'noted']);
 const SITE_PAIRS = {
   mesial: { buccal: 0, lingual: 3 },
@@ -292,6 +294,7 @@ export function parseInto(state, text) {
   let stored = false; // mob/fur writes leave no hist trace
   let stop = false; // "stop" hands the app a stop request via the return value
   let undone = false; // clear/scratch/undo popped at least one entry
+  let cleared = false; // "clear tooth" wiped a whole tooth (says "tooth cleared", not the wiped values)
   let nums = [];
   const flush = () => {
     if (!nums.length) return;
@@ -832,6 +835,7 @@ export function parseInto(state, text) {
         const r = resolveTooth(toks, j + 1);
         const t = r ? r[0] : state.cur.t;
         clearTooth(state, t);
+        cleared = true;
         state.cur = { t, s: 0 };
         state.aspect = 'facial';
         state.aspectSet = false;
@@ -866,6 +870,22 @@ export function parseInto(state, text) {
   const added = state.hist.length - mark;
   if (added > 0) state.groups.push(added);
   const kinds = [...new Set(state.hist.slice(mark).map((h) => h.kind))];
+  // ponytail: TTS echo reads final values - entries superseded in-utterance resolve to the winner
+  const said = [];
+  for (const h of state.hist.slice(mark)) {
+    if (h.kind === 'depth') said.push({ kind: h.kind, t: h.t, s: h.s, v: state.teeth[h.t]?.[h.s] ?? null });
+    else if (h.kind === 'rec') said.push({ kind: h.kind, t: h.t, s: h.s, v: state.rec[h.t]?.[h.s] ?? 0 });
+    else if (h.kind === 'mob') {
+      const v = state.mob[h.t];
+      if (v != null) said.push({ kind: h.kind, t: h.t, s: h.s, v });
+    } else if (h.kind === 'fur') {
+      const g = state.fur[h.t];
+      if (g) said.push({ kind: h.kind, t: h.t, s: h.s, v: g.grade, side: g.side });
+    } else if (h.kind === 'absent') {
+      const st = state.absent[h.t];
+      if (st != null) said.push({ kind: h.kind, t: h.t, s: h.s, v: st });
+    } else said.push({ kind: h.kind, t: h.t, s: h.s });
+  }
   // ponytail: non-empty input that changed nothing is either navigation (cur moved) or prose
   if (
     added <= 0 &&
@@ -876,5 +896,5 @@ export function parseInto(state, text) {
   ) {
     hint ??= 'no clinical data found';
   }
-  return { ms: performance.now() - t0, hint, added, stored, undone, stop, kinds };
+  return { ms: performance.now() - t0, hint, added, stored, undone, stop, cleared, kinds, said };
 }

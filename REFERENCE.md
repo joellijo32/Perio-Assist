@@ -176,7 +176,8 @@ emits `[unk]` and the alias can never fire. Never alias syntax words
 - Chimes (WebAudio, no files): rising tone when the engine is ready,
   falling tone on stop, blip on entry, low blip on undo,
   puzzled tone when nothing was understood
-- Voice feedback toggle (header) — spoken action summaries
-  (`recorded`, `bleeding marked`, `undone`) after the beep, voice
-  input only. While summaries play, recognition is fully torn down
-  and rebuilt after, so our own echo can never re-chart.
+- Voice feedback toggle (header) — spoken summaries after the beep,
+  voice input only. Depths echo grouped (`1 2 3 on tooth 12 buccal`),
+  findings echo with their site (`bleeding on mesiobuccal`), take-backs
+  say `undone` / `tooth cleared`. While summaries play, recognition is
+  fully torn down and rebuilt after, so our own echo can never re-chart.
