@@ -9,8 +9,7 @@ first load.
 
 - **Svelte 5** (runes: `$state`, `$derived`, snippets) + **Vite 6**, package
   manager is **pnpm** — never npm.
-- **STT engines** (runtime-switchable, now defaulting to Vosk): Web Speech
-  API (cloud, Chrome/Edge) and **vosk-browser** (on-device WASM, model in
+- **STT engines** **vosk-browser** (on-device WASM, model in
   `public/model.tar.gz`, gitignored, installed by `scripts/setup.sh`).
 - Parser is dependency-free vanilla JS so it runs in node tests unchanged.
 

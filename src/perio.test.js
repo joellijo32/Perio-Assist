@@ -264,4 +264,17 @@ parseInto(m, 'tooth 9 gm 3');
 assert.equal(m.rec[9][0], 3, 'gm bare');
 parseInto(m, 'undo');
 assert.equal(m.rec[9][0], 0, 'undo GM');
+// result signals for chimes: insert / undo / puzzled / nav-silent
+const q = createState();
+const ins = parseInto(q, '3 2 3');
+assert.equal(ins.added > 0 && !ins.undone && ins.hint == null, true, 'insert signal');
+const nav = parseInto(q, 'jump 12');
+assert.equal(nav.added === 0 && !nav.stored && !nav.undone && nav.hint == null, true, 'nav silent');
+const puz = parseInto(q, 'hello world');
+assert.equal(puz.added === 0 && !puz.stored && !puz.undone && puz.hint != null, true, 'puzzled signal');
+parseInto(q, '4 5 6');
+const un = parseInto(q, 'undo');
+assert.equal(un.undone, true, 'undo signal');
+const clr = parseInto(createState(), 'clear');
+assert.equal(clr.undone, false, 'no-op clear is not undo');
 console.log('perio.test ok');

@@ -8,7 +8,7 @@ export { SITENAMES };
 export const store = $state({
   ...createState(),
   transcript: [],
-  status: 'Idle. Pick an engine and press Start.',
+  status: 'Idle. Click here or press Space to start.',
   latencyMs: null,
   listening: false,
 });
@@ -62,6 +62,7 @@ export function commit(text) {
   const r = parseInto(store, text);
   store.latencyMs = r.ms;
   if (r.hint) store.status = r.hint;
+  return r;
 }
 
 // ponytail: click navigation mirrors the parser's explicit navs (cursor + aspect, no stale overflow)
@@ -81,7 +82,7 @@ export function resetAll() {  const fresh = createState();
   store.hist = fresh.hist;
   store.groups = fresh.groups;
   store.absent = fresh.absent;
-  store.status = 'Idle. Pick an engine and press Start.';
+  store.status = 'Idle. Click here or press Space to start.';
   store.rec = fresh.rec;
   store.sup = fresh.sup;
   store.plaque = fresh.plaque;

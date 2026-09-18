@@ -252,6 +252,7 @@ export function parseInto(state, text) {
   const ctx0 = `${state.aspect}${state.aspectSet}${Object.keys(state.absent).length}`;
   let negated = false;
   let stored = false; // mob/fur writes leave no hist trace
+  let undone = false; // clear/scratch/undo popped at least one entry
   let nums = [];
   const flush = () => {
     if (!nums.length) return;
@@ -766,7 +767,9 @@ export function parseInto(state, text) {
     if (w === 'clear' || w === 'scratch') {
       flush();
       const own = state.hist.length > mark;
-      restore(state, state.hist.pop());
+      const h = state.hist.pop();
+      if (h) undone = true;
+      restore(state, h);
       state.overflowed = false;
       if (!own) shrinkGroup(state);
       continue;
@@ -782,7 +785,7 @@ export function parseInto(state, text) {
         earliest = h;
         restore(state, h, false);
       }
-      if (earliest) { state.cur = { t: earliest.t, s: earliest.s }; state.overflowed = false; }
+      if (earliest) { undone = true; state.cur = { t: earliest.t, s: earliest.s }; state.overflowed = false; }
       continue;
     }
   }
@@ -799,5 +802,5 @@ export function parseInto(state, text) {
   ) {
     hint ??= 'no clinical data found';
   }
-  return { ms: performance.now() - t0, hint };
+  return { ms: performance.now() - t0, hint, added, stored, undone };
 }
