@@ -1,4 +1,6 @@
 // ponytail: pure framework-free chart logic - testable in node, wrapped with $state in chart.svelte.js
+// user-editable mishearing map (aliases.json) applied at tokenize time - no code changes for new confusions
+import ALIASES from './aliases.json' with { type: 'json' };
 export const NUMWORDS = {
   zero: 0, one: 1, won: 1, two: 2, to: 2, too: 2, three: 3, tree: 3,
   four: 4, for: 4, fore: 4, five: 5, six: 6, seven: 7, ate: 8, eight: 8,
@@ -216,9 +218,6 @@ function patchDepth(state, t, s, v) {
 }
 
 const FILLER = new Set(['is', 'a', 'the', 'that', 'with', 'wait', 'positive', 'please', 'are']);
-
-// ponytail: observed mishearing - "[unk]" under grammar, "vocation" open-vocab (v/f onset + -cation tail)
-const isFurc = (w) => w === 'furcation' || w === 'vocation';
 const NEG_SET = new Set(['bleeding', 'bleed', 'blood', 'bop', 'drop', 'mobility', 'suppuration']);
 
 function skipFiller(toks, j) {
@@ -244,7 +243,8 @@ export function parseInto(state, text) {
     .replace(/(\d+)mm\b/g, '$1 millimeter ')
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((t) => ALIASES[t] ?? t);
   if (!toks.length) return { ms: performance.now() - t0, hint: 'empty input' };
   const cur0 = `${state.cur.t}:${state.cur.s}`;
   const ctx0 = `${state.aspect}${state.aspectSet}${Object.keys(state.absent).length}`;
@@ -431,7 +431,7 @@ export function parseInto(state, text) {
       const v = toNum(toks[j]);
       if (v == null) continue;
       const fwd = toks.slice(j + 1, j + 4);
-      const fi = fwd.findIndex(isFurc);
+      const fi = fwd.indexOf('furcation');
       if (fi >= 0) {
         let k = j + 1 + fi + 1;
         k = skipFiller(toks, k);
@@ -448,7 +448,7 @@ export function parseInto(state, text) {
       i = j;
       continue;
     }
-    if (isFurc(w)) {
+    if (w === 'furcation') {
       const hadPending = nums.length > 0;
       flush(); // "furcation class one on buccal" (or "vocation ...")
       const t = condTooth(state, hadPending);
