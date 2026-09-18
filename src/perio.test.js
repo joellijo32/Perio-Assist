@@ -219,4 +219,7 @@ parseInto(f, 'tooth 5 buccal 2-3-2');
 assert.deepEqual(f.teeth[5].slice(0, 3), [2, 3, 2], 'row triplet intact');
 parseInto(f, 'tooth 6 suppuration noted at mid-buccal');
 assert.equal(f.sup[6][1], true, 'real suppuration intact');
+// observed live mishearing: "furcation" -> "vocation" (verified on user recording, both models)
+parseInto(f, 'tooth 5 vocation class three on lingual');
+assert.deepEqual(f.fur[5], { grade: 3, side: 'lingual' }, 'vocation alias');
 console.log('perio.test ok');

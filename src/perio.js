@@ -196,6 +196,9 @@ function patchDepth(state, t, s, v) {
 }
 
 const FILLER = new Set(['is', 'a', 'the', 'that', 'with', 'wait', 'positive', 'please', 'are']);
+
+// ponytail: observed mishearing - "[unk]" under grammar, "vocation" open-vocab (v/f onset + -cation tail)
+const isFurc = (w) => w === 'furcation' || w === 'vocation';
 const NEG_SET = new Set(['bleeding', 'bleed', 'blood', 'bop', 'drop', 'mobility', 'suppuration']);
 
 function skipFiller(toks, j) {
@@ -408,8 +411,9 @@ export function parseInto(state, text) {
       const v = toNum(toks[j]);
       if (v == null) continue;
       const fwd = toks.slice(j + 1, j + 4);
-      if (fwd.includes('furcation')) {
-        let k = j + 1 + fwd.indexOf('furcation') + 1;
+      const fi = fwd.findIndex(isFurc);
+      if (fi >= 0) {
+        let k = j + 1 + fi + 1;
         k = skipFiller(toks, k);
         if (toks[k] === 'on' || toks[k] === 'at') k = skipFiller(toks, k + 1);
         const side = SIDEWORDS.has(toks[k]) ? toks[k] : null;
@@ -424,9 +428,9 @@ export function parseInto(state, text) {
       i = j;
       continue;
     }
-    if (w === 'furcation') {
+    if (isFurc(w)) {
       const hadPending = nums.length > 0;
-      flush(); // "furcation class one on buccal"
+      flush(); // "furcation class one on buccal" (or "vocation ...")
       const t = condTooth(state, hadPending);
       let j = skipFiller(toks, i + 1);
       if (toks[j] === 'class') j = skipFiller(toks, j + 1);

@@ -6,3 +6,4 @@ scripts/acoustic-eval/.venv/
 scripts/acoustic-eval/models/
 scripts/acoustic-eval/fixtures/
 scripts/acoustic-eval/results.json
+scripts/acoustic-eval/samples/
