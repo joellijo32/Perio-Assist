@@ -274,7 +274,24 @@ export function parseInto(state, text) {
       const row = toks[j] === 'buccal' || toks[j] === 'facial' ? [0, 'facial']
         : toks[j] === 'lingual' ? [3, 'lingual'] : null;
       if (row) {
+        const hadPending = nums.length > 0;
         flush();
+        // ponytail: lgraph hears "furcation" as facial/suppuration ("facial class two") -
+        // rows never take grades, but plain depths ("buccal 2-3-2") must pass through untouched
+        let k = skipFiller(toks, j + 1);
+        if (toks[k] === 'class') {
+          const kk = skipFiller(toks, k + 1);
+          const g = toNum(toks[kk]);
+          if (g >= 1 && g <= 3) {
+            let m = skipFiller(toks, kk + 1);
+            if (toks[m] === 'on' || toks[m] === 'at') m = skipFiller(toks, m + 1);
+            const side = SIDEWORDS.has(toks[m]) ? toks[m] : null;
+            state.fur[condTooth(state, hadPending)] = { grade: g, side };
+            stored = true;
+            i = (side ? m + 1 : kk + 1) - 1;
+            continue;
+          }
+        }
         state.aspect = row[1];
         state.aspectSet = true;
         state.cur.s = row[0];
@@ -438,8 +455,24 @@ export function parseInto(state, text) {
     }
     if (w === 'suppuration') {
       const hadPending = nums.length > 0;
-      flush(); // "suppuration at mid-buccal and disto-lingual"
+      flush();
       const t = condTooth(state, hadPending);
+      // ponytail: lgraph hears "furcation" as "suppuration" ("suppuration class two") -
+      // suppuration never takes a grade, plain depths ("suppuration noted, 2 3 4") pass through
+      let j = skipFiller(toks, i + 1);
+      if (toks[j] === 'class') {
+        const kk = skipFiller(toks, j + 1);
+        const g = toNum(toks[kk]);
+        if (g >= 1 && g <= 3) {
+          let m = skipFiller(toks, kk + 1);
+          if (toks[m] === 'on' || toks[m] === 'at') m = skipFiller(toks, m + 1);
+          const side = SIDEWORDS.has(toks[m]) ? toks[m] : null;
+          state.fur[t] = { grade: g, side };
+          stored = true;
+          i = (side ? m + 1 : kk + 1) - 1;
+          continue;
+        }
+      }
       const site = toSite(toks, i + 1, state.aspect);
       const first = site ? site[0] : Math.max(0, state.cur.s - 1);
       state.sup[t][first] = true;

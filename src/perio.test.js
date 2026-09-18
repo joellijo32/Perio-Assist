@@ -206,4 +206,17 @@ const d = createState();
 parseInto(d, 'jump 13');
 parseInto(d, '3 2 B 4');
 assert.deepEqual(d.teeth[13].slice(0, 2), [3, 4], 'triplet flow kept, B corrected to 4');
+// lgraph mishears "furcation" as facial/suppuration - grades never follow those words, so repair
+const f = createState();
+parseInto(f, 'tooth 3 facial class two on buccal');
+assert.deepEqual(f.fur[3], { grade: 2, side: 'buccal' }, 'facial+class repair');
+assert.equal(f.sup[3].every((v) => !v), true, 'no suppuration set');
+parseInto(f, 'tooth 4 suppuration class one on lingual');
+assert.deepEqual(f.fur[4], { grade: 1, side: 'lingual' }, 'suppuration+class repair');
+assert.equal(f.sup[4].every((v) => !v), true, 'repair sets no suppuration');
+// plain rows + real suppuration untouched by the repair
+parseInto(f, 'tooth 5 buccal 2-3-2');
+assert.deepEqual(f.teeth[5].slice(0, 3), [2, 3, 2], 'row triplet intact');
+parseInto(f, 'tooth 6 suppuration noted at mid-buccal');
+assert.equal(f.sup[6][1], true, 'real suppuration intact');
 console.log('perio.test ok');
