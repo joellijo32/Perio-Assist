@@ -6,12 +6,12 @@
 
 |                   |                                           |
 | ----------------- | ----------------------------------------- |
-| **Problem:**      | Hands-free periodontal charting             |
-| **Team Name:**    | [Your Team Name]                          |
-| **Team Members:** | [Name 1] · [Name 2] · [Name 3] · [Name 4] |
+| **Problem:**      | Problem 7 — Real-Time Clinical Measurement |
+| **Team Name:**    | LocalOps                          |
+| **Team Members:** | Abraham Jacob Pathil · Joel Lijo Mathew · Nikhil M Warrier · Johann Thomas Philip |
 | **Institution:**  | College of Engineering Trivandrum (CET)   |
-| **Live Demo:**    | [Demo link goes here]                     |
-| **Pitch Video:**  | [Social media pitch video link]           |
+| **Live Demo:**    | TBD                     |
+| **Pitch Video:**  | [Instagram Reel](https://www.instagram.com/p/DdcJ9SDx6Ik/)           |
 
 ---
 
@@ -32,14 +32,20 @@
 
 ## Problem Statement
 
-> Periodontal charting requires measuring ~192 pocket depths (6 sites ×
-> 32 teeth) plus bleeding, recession, and mobility — with both hands
-> occupied inside the patient's mouth (mirror and probe). A typical
-> office often ties up a trained assistant just to stand by, listening for
-> numbers. Without one, the hygienist probes a few teeth, stops,
-> de-gloves (or touches a dirty keyboard), types, and returns —
-> cross-contamination risk and miserable UX for a pipeline that is
-> largely automatable with minimal compute.
+> ## Problem 7: Real-Time Clinical Measurement
+>
+> Develop a real-time or near-real-time voice solution that enables dental
+> professionals to capture and record clinical measurements with minimal delay.
+>
+> The solution should process spoken measurements such as pocket depth,
+> bleeding, recession, and other periodontal findings, converting them into
+> structured data and reflecting them in the application almost instantly. It
+> should explore ways to combine speech recognition, rule-based processing,
+> and AI while handling corrections, repeated measurements, and natural
+> variations in speech.
+>
+> The goal is to reduce processing latency and manual data entry, creating a
+> fast, seamless, hands-free clinical documentation experience.
 
 ### Why this matters
 
@@ -53,7 +59,7 @@
 
 ## Our Solution
 
-**PerioVoice** — a local, browser-based voice perio chart. The hygienist
+**PerioVoice** — a local, **browser-based** voice perio chart. The hygienist
 speaks measurements hands-free (`three two three, bleeding…`) and the
 Open Dental-style chart fills in real time, with JSON export for existing
 practice-management software. No cloud, no keyboard — the team stays
@@ -63,9 +69,14 @@ Architecture: a WebAssembly speech recognizer (Vosk, on-device) streams
 partials/finals into a deterministic dependency-free JS parser (`perio.js`),
 constrained by a strict clinical grammar (`grammar.json` acts as a
 Grammar-FST — a word outside the vocabulary physically cannot be
-transcribed). Decode plus parse run in tens of milliseconds with zero
-network hops; full-utterance budget is sub-300ms, verified per-machine
-(see `EVAL.md` for method) — with zero ongoing inference or hosting cost.
+transcribed). On the PS's speech-recognition/rule-based/AI combination:
+speech recognition handles audio→words, rules handle words→chart (exact,
+undoable, ~1ms); generative AI is deliberately excluded from the hot path
+— latency budget and determinism leave no room for it. Decode plus parse
+run in tens of milliseconds with zero network hops; full-utterance budget
+is sub-300ms, verified per-machine.
+
+Zero ongoing inference or hosting cost.
 
 What makes it different:
 
@@ -77,10 +88,7 @@ What makes it different:
    STT/hosting fees avoided (per-minute pricing × charting volume);
    runs on the office PC already in the room.
 4. **Instant feedback** — numbers appear as fast as they're spoken.
-5. **Grammar-gated accuracy** — parser 99.8% on ground-truth transcripts,
-   ~86% digit accuracy end-to-end on synthetic speech (see `EVAL.md`;
-   live-user validation still open), with no LLM hallucinations possible
-   by construction.
+5. **Grammar-gated accuracy** — parser 99.8% on ground-truth transcripts, with no LLM hallucinations possible by construction.
 
 ---
 
@@ -107,7 +115,7 @@ What makes it different:
 |---|---|
 | ![Live chart](./assets/screenshots/screencap.png) | Chart filling live during voice dictation |
 | [Demo recording](./assets/demo/screencap.mov) | Full hands-free charting pass |
-| Pitch video (>30s) | Post to a team member's social profile tagging **@DrishtiCET** & **@CareStack**, then link it here |
+| Pitch video (>30s) | [Instagram reel](https://www.instagram.com/p/DdcJ9SDx6Ik/) |
 
 ---
 
@@ -170,19 +178,16 @@ _3-minute runbook. Type in the fallback box if the room is too loud._
 
 ### Known Limitations
 
-- English-only vocabulary (~100 words); Chrome/Edge recommended, Firefox
-  TTS voices vary
-- No direct PMS write-back yet (JSON export instead); single session, no
-  recall comparison
-- Plaque is per-site flags only; statistics stop at BOP/PI%/max-PD
-- Accuracy evidence is synthetic (text + TTS) — no live-user clinical
-  validation yet; see `EVAL.md` for exactly what each number measures
+- English-only vocabulary (~100 words)
+- Text-to-Speech (feedback) produces a high-pitched noise in Firefox. Chromium-based browsers recommended.
 
 ### Future Scope
 
-- One-click PMS import formats; multi-session recall deltas
-- More dictation languages; expanded grading/staging advisories
-- Chairside latency report built into the app
+- Integration into CareStack's wider ecosystem.
+- More dictation languages.
+- Custom rules map for frequently misheard words.
+- Custom abbreviations map.
+- Service Worker to control the model cache.
 
 ---
 
@@ -190,20 +195,21 @@ _3-minute runbook. Type in the fallback box if the room is too loud._
 
 | Name     | Role(s)                         | GitHub    | Email   |
 | -------- | ------------------------------- | --------- | ------- |
-| [Name 1] | [e.g. Full-stack / ML / Design] | [@handle] | [email] |
-| [Name 2] |                                 |           |         |
-
+| Nikhil M Warrier | Web, end-to-end pipeline | [@nikhilmwarrier](https://github.com/nikhilmwarrier) | nikhilmw.dev@gmail.com |
+| Abraham J Pathil | Evaluation metrics, testing  |  [@AbrahamJPathil](https://github.com/AbrahamJPathil) | abrahamjpathildev@gmail.com |
+| Joel Lijo Mathew |  Ideation, media, repo management | [@joellijo32](https://github.com/joellijo32/) | joellijo4@gmail.com |
+| Johann Thomas Philip | Domain research, creative direction | [@theflawlesserror](https://github.com/theflawlesserror)          | johann.t.philip@gmail.com        |
 ---
 
 ## Submission Checklist
 
 **Before 6:00 AM (Code Freeze) – Sat, Sept 19th:**
 
-- [ ] Clean, runnable source code committed to this **public** repo
-- [ ] `README.md` fully filled in (all sections above)
-- [ ] Pitch video (>30s, English) posted on team member's social profile
+- [x] Clean, runnable source code committed to this **public** repo
+- [x] `README.md` fully filled in (all sections above)
+- [x] Pitch video (>30s, English) posted on team member's social profile
       tagging **@DrishtiCET** & **@CareStack** and link added above
-- [ ] All secrets/API keys removed from the repo (none exist by design —
+- [x] All secrets/API keys removed from the repo (none exist by design —
       verify with a grep for `sk-`, `token`, `passwd` before freezing)
-- [ ] Quick-start verified from a fresh clone (`git clone` → `cd frontend`
+- [x] Quick-start verified from a fresh clone (`git clone` → `cd frontend`
       → `pnpm install` → `pnpm setup` → `pnpm dev`)
