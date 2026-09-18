@@ -1,0 +1,13 @@
+# Non-Python requirements for the testing harness
+
+# System package (used by acoustic-eval/synth.py via subprocess)
+# Install: sudo apt install sox  OR  brew install sox
+sox
+
+# Kokoro TTS model files (one-time download, gitignored)
+# Run: ./testing/acoustic-eval/setup.sh
+# Downloads: .kokoro/kokoro-v1.0.onnx + .kokoro/voices-v1.0.bin
+
+# Vosk ASR model (shared with the app, gitignored)
+# Run: pnpm setup  (or ./scripts/setup.sh)
+# Downloads: public/model.tar.gz -> testing/acoustic-eval/models/active/

@@ -1,0 +1,4 @@
+numpy
+vosk
+soundfile
+kokoro-onnx
