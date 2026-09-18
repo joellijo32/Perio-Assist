@@ -79,6 +79,7 @@
   }
   function commitAndChime(text) {
     const r = commit(text);
+    if (r.stop && store.listening) { toggle(); return; } // voice "stop" - toggle chimes itself
     if (r.undone) chime('undo');
     else if (r.added > 0 || r.stored) chime('insert');
     else if (r.hint) chime('puzzled');

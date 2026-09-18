@@ -127,6 +127,7 @@ Grades are consumed as grades, never depths.
 - `clear tooth` / `clear tooth 14` — wipe the whole tooth (status kept),
   cursor parks for re-charting; one `undo` restores everything
 - `undo` — take back the whole last utterance
+- `stop` — stop listening (records anything said before it in the same breath)
 
 ## Negation
 

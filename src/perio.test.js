@@ -322,4 +322,12 @@ parseInto(w, 'tooth 15 implant');
 parseInto(w, 'clear tooth 15');
 assert.equal(w.absent[15], 'IMPLANT', 'status kept');
 assert.deepEqual(w.cur, { t: 15, s: 0 }, 'navigates to cleared tooth');
+// voice "stop" records pending input, then asks the app to stop listening
+const st = createState();
+parseInto(st, 'jump 12');
+const withStop = parseInto(st, '3 2 3 stop');
+assert.deepEqual(st.teeth[12].slice(0, 3), [3, 2, 3], 'stop keeps charted data');
+assert.equal(withStop.stop, true, 'stop flag set');
+assert.equal(parseInto(createState(), 'stop').stop, true, 'bare stop');
+assert.equal(parseInto(createState(), '3 2 3').stop ?? false, false, 'no stop otherwise');
 console.log('perio.test ok');

@@ -290,6 +290,7 @@ export function parseInto(state, text) {
   const ctx0 = `${state.aspect}${state.aspectSet}${Object.keys(state.absent).length}`;
   let negated = false;
   let stored = false; // mob/fur writes leave no hist trace
+  let stop = false; // "stop" hands the app a stop request via the return value
   let undone = false; // clear/scratch/undo popped at least one entry
   let nums = [];
   const flush = () => {
@@ -593,6 +594,11 @@ export function parseInto(state, text) {
       i = k - 1;
       continue;
     }
+    if (w === 'stop') {
+      flush(); // "3 2 3 stop" records, then asks the app to stop listening
+      stop = true;
+      continue;
+    }
     if (w === 'repeat') { flush(); nums = [...state.last]; continue; }
     if (w === 'jump' || w === 'go') {
       flush();
@@ -869,5 +875,5 @@ export function parseInto(state, text) {
   ) {
     hint ??= 'no clinical data found';
   }
-  return { ms: performance.now() - t0, hint, added, stored, undone };
+  return { ms: performance.now() - t0, hint, added, stored, undone, stop };
 }
