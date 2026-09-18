@@ -103,7 +103,8 @@ Grades are consumed as grades, never depths.
 ## Tooth status
 
 - `missing` / `implant` — marks the current tooth
-  (missing blanks the column; implants keep charting)
+  (every marked tooth renders blank but keeps its data; sequential flow
+  skips marked teeth, explicit landing still charts)
 - `tooth 5 is missing` / `tooth 12 implant` / `tooth 5 present`
 - Bulk: `all teeth missing`, `all wisdom teeth missing`,
   `all upper teeth implant`, `all lower teeth present`
@@ -114,8 +115,8 @@ Grades are consumed as grades, never depths.
 - `tooth 14 has peri-implantitis` / `periimplantitis` / `peri implantitis`
   — red tint, tooth keeps charting (disease monitoring)
 - `tooth 14 recovered` / `healed` — green tint
-- Plain `implant` — yellow tint. Only `missing` is ever skipped in
-  sequential flow; everything tinted still gets probed.
+- Plain `implant` — yellow tint. Marked teeth render blank (data kept)
+  and are skipped in sequential flow; land explicitly to chart them.
 
 ## Corrections
 

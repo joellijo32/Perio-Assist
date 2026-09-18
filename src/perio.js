@@ -153,8 +153,8 @@ export function createState() {
 }
 
 function skipAbsent(state) {
-  // ponytail: only MISSING skips - tinted teeth (implant/peri-implantitis/recovered) still get probed
-  while (state.absent[state.cur.t] === 'MISSING' && state.cur.t < 32) { state.cur.t++; state.cur.s = 0; }
+  // ponytail: marked teeth show no values, so sequential flow skips them; explicit landing still works
+  while (state.absent[state.cur.t] && state.cur.t < 32) { state.cur.t++; state.cur.s = 0; }
 }
 
 function advance(state, n = 1) {

@@ -18,7 +18,7 @@
     let hit = 0,
       total = 0;
     for (const t of Object.keys(store.teeth)) {
-      if (store.absent[t] === 'MISSING') continue;
+      if (store.absent[t]) continue;
       for (let s = 0; s < 6; s++) {
         if (store.teeth[t][s] == null) continue;
         total++;
@@ -32,7 +32,7 @@
     let hit = 0,
       total = 0;
     for (const t of Object.keys(store.teeth)) {
-      if (store.absent[t] === 'MISSING') continue;
+      if (store.absent[t]) continue;
       for (let s = 0; s < 6; s++) {
         if (store.teeth[t][s] == null) continue;
         total++;
@@ -45,7 +45,7 @@
   const maxPD = $derived.by(() => {
     let m = 0;
     for (const t of Object.keys(store.teeth)) {
-      if (store.absent[t] === 'MISSING') continue;
+      if (store.absent[t]) continue;
       for (const v of store.teeth[t]) if (v != null && v > m) m = v;
     }
     return m;

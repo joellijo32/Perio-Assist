@@ -102,7 +102,7 @@ parseInto(s, 'correction 2 on distal');
 assert.equal(s.teeth[27][5], 2, 'correction on site');
 assert.deepEqual(s.cur, { t: 28, s: 0 }, 'correction keeps cursor');
 // missing teeth are flagged and skipped
-// marked teeth land (implants carry charting); sequential flow skips them via advance/next
+// marked teeth land explicitly (data kept in store, display blanks); sequential flow skips them
 parseInto(s, 'tooth 28 is missing');
 assert.equal(s.absent[28], 'MISSING', 'missing status');
 assert.deepEqual(s.cur, { t: 28, s: 0 }, 'missing lands');
@@ -277,12 +277,12 @@ const un = parseInto(q, 'undo');
 assert.equal(un.undone, true, 'undo signal');
 const clr = parseInto(createState(), 'clear');
 assert.equal(clr.undone, false, 'no-op clear is not undo');
-// implant health states: chartable tints, only MISSING skips sequential flow
+// implant health states: tints blank the column, data stays in store, flow skips marked teeth
 const ih = createState();
 parseInto(ih, 'tooth 14 implant');
 assert.equal(ih.absent[14], 'IMPLANT', 'implant marked');
 parseInto(ih, '3 2 3');
-assert.deepEqual(ih.teeth[14].slice(0, 3), [3, 2, 3], 'implant chartable');
+assert.deepEqual(ih.teeth[14].slice(0, 3), [3, 2, 3], 'explicit landing still charts (kept in store)');
 parseInto(ih, 'tooth 15 has peri-implantitis');
 assert.equal(ih.absent[15], 'PERIIMPLANTITIS', 'peri pair form');
 parseInto(ih, 'tooth 14 recovered');
@@ -296,7 +296,8 @@ parseInto(ih, 'jump 17');
 parseInto(ih, '1 1 1 1 1 1');
 assert.deepEqual(ih.cur, { t: 19, s: 0 }, 'missing skipped on arrival');
 parseInto(ih, 'tooth 20 implant');
-parseInto(ih, 'jump 19');
-parseInto(ih, '2 2 2 2 2 2');
-assert.deepEqual(ih.cur, { t: 20, s: 0 }, 'implant landed, not skipped');
+parseInto(ih, 'jump 13');
+parseInto(ih, '1 1 1 1 1 1');
+assert.deepEqual(ih.cur, { t: 16, s: 0 }, 'marked teeth (14 implant, 15 peri) skipped on arrival');
+assert.deepEqual(ih.teeth[14].slice(0, 3), [3, 2, 3], 'stored data kept, display blanks it');
 console.log('perio.test ok');
