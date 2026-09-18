@@ -1,5 +1,5 @@
 <script>
-  import { moveTo, SITENAMES, store } from './chart.svelte.js';
+  import { moveTo, preview, SITENAMES, store } from './chart.svelte.js';
 
   // ponytail: Open Dental data-chart rows - probing + dots, GM, auto-CAL, mobility, furcation
   const UPPER = Array.from({ length: 16 }, (_, i) => i + 1);
@@ -12,20 +12,25 @@
 
 {#snippet brow(t, s)}
   {@const v = store.teeth[t][s]}
+  {@const pv = preview.teeth?.[t]?.[s]}
+  {@const pb = preview.bleed?.[t]?.[s]}
+  {@const diffVal = pv !== undefined && pv !== v}
+  {@const diffBleed = pb !== undefined && pb !== store.bleed[t][s]}
   {@const sel = store.cur.t === t && store.cur.s === s}
   <button
     class="pd"
     class:sel
     class:miss={!!store.absent[t]}
     class:flag={v != null && v >= 4}
+    class:pre={diffVal || diffBleed}
     onclick={() => moveTo(t, s)}
     title={`${t} ${SITENAMES[s]}${store.rec[t][s] ? `, rec ${store.rec[t][s]}` : ''}${store.sup[t][s] ? ', suppuration' : ''}`}
   >
     <span class="dots">
-      {#if store.bleed[t][s]}<i class="dot bop"></i>{/if}
+      {#if (diffBleed ? pb : store.bleed[t][s])}<i class="dot bop" class:faded={diffBleed && !store.bleed[t][s]}></i>{/if}
       {#if store.sup[t][s]}<i class="dot sup"></i>{/if}
     </span>
-    <span>{v ?? '·'}</span>
+    <span class:faded={diffVal}>{diffVal ? (pv ?? '·') : (v ?? '·')}</span>
   </button>
 {/snippet}
 
@@ -106,4 +111,6 @@
   .gm, .cal, .mob { text-align: center; font-size: 12px; padding: 1px 0; border: 1px solid #f0f0f0; }
   .cal { color: #666; font-style: italic; }
   .cal.flag { color: #c00; font-style: normal; font-weight: bold; }
+  .pd.pre { border-color: #6af; background: #f0f8ff; }
+  .faded { opacity: 0.55; font-style: italic; }
 </style>

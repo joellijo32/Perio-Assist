@@ -12,13 +12,36 @@ export const store = $state({
   listening: false,
 });
 
+// ponytail: preview holds scratch teeth+bleed from the latest partial result -
+//   cleared on commit/stop; no cursor or hist leaks into committed state
+export const preview = $state({ teeth: null, bleed: null, cur: null });
+
 let nextId = 1;
 
 export function say(text, final) {
   store.transcript.unshift({ id: nextId++, text, final });
 }
 
+export function previewPartial(text) {
+  if (!text) { preview.teeth = null; preview.bleed = null; preview.cur = null; return; }
+  // ponytail: JSON clone of the mutable arrays only - hist/groups omitted so clone stays cheap
+  const scratch = {
+    ...createState(),
+    ...JSON.parse(JSON.stringify({
+      teeth: store.teeth, bleed: store.bleed, rec: store.rec,
+      sup: store.sup, absent: store.absent, mob: store.mob, fur: store.fur,
+    })),
+    cur: { ...store.cur }, aspect: store.aspect, aspectSet: store.aspectSet,
+    overflowed: store.overflowed, last: [...store.last], hist: [], groups: [],
+  };
+  parseInto(scratch, text);
+  preview.teeth = scratch.teeth;
+  preview.bleed = scratch.bleed;
+  preview.cur = scratch.cur;
+}
+
 export function commit(text) {
+  preview.teeth = null; preview.bleed = null; preview.cur = null;
   say(text, true);
   const r = parseInto(store, text);
   store.latencyMs = r.ms;

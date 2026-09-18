@@ -1,6 +1,6 @@
 <script>
   import { onDestroy } from 'svelte';
-  import { commit, resetAll, say, SITENAMES, store } from './chart.svelte.js';
+  import { commit, previewPartial, resetAll, say, SITENAMES, store } from './chart.svelte.js';
   import { createRecognizer } from './recognizer.js';
   import PerioChart from './PerioChart.svelte';
 
@@ -35,7 +35,7 @@
   });
 
   const recognizer = createRecognizer({
-    onPartial: (text) => say(text, false),
+    onPartial: (text) => { say(text, false); previewPartial(text); },
     onFinal: (text) => commit(text),
     onStatus: (text) => (store.status = text),
     onStop: (text) => {
