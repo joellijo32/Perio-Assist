@@ -102,7 +102,7 @@ parseInto(s, 'correction 2 on distal');
 assert.equal(s.teeth[27][5], 2, 'correction on site');
 assert.deepEqual(s.cur, { t: 28, s: 0 }, 'correction keeps cursor');
 // missing teeth are flagged and skipped
-// marked teeth land (implants carry charting); sequential flow skips them via advance/next
+// marked teeth land explicitly (data kept in store, display blanks); sequential flow skips them
 parseInto(s, 'tooth 28 is missing');
 assert.equal(s.absent[28], 'MISSING', 'missing status');
 assert.deepEqual(s.cur, { t: 28, s: 0 }, 'missing lands');
@@ -277,4 +277,49 @@ const un = parseInto(q, 'undo');
 assert.equal(un.undone, true, 'undo signal');
 const clr = parseInto(createState(), 'clear');
 assert.equal(clr.undone, false, 'no-op clear is not undo');
+// implant health states: tints blank the column, data stays in store, flow skips marked teeth
+const ih = createState();
+parseInto(ih, 'tooth 14 implant');
+assert.equal(ih.absent[14], 'IMPLANT', 'implant marked');
+parseInto(ih, '3 2 3');
+assert.deepEqual(ih.teeth[14].slice(0, 3), [3, 2, 3], 'explicit landing still charts (kept in store)');
+parseInto(ih, 'tooth 15 has peri-implantitis');
+assert.equal(ih.absent[15], 'PERIIMPLANTITIS', 'peri pair form');
+parseInto(ih, 'tooth 14 recovered');
+assert.equal(ih.absent[14], 'RECOVERED', 'recovered overwrites');
+parseInto(ih, 'undo');
+assert.equal(ih.absent[14], 'IMPLANT', 'undo restores prior state');
+parseInto(ih, 'tooth 21 healed');
+assert.equal(ih.absent[21], 'RECOVERED', 'healed alias');
+parseInto(ih, 'tooth 22 peri implant');
+assert.equal(ih.absent[22], 'PERIIMPLANTITIS', 'peri implant pair');
+parseInto(ih, 'tooth 23 pi');
+assert.equal(ih.absent[23], 'PERIIMPLANTITIS', 'PI shorthand');
+parseInto(ih, 'tooth 18 missing');
+parseInto(ih, 'jump 17');
+parseInto(ih, '1 1 1 1 1 1');
+assert.deepEqual(ih.cur, { t: 19, s: 0 }, 'missing skipped on arrival');
+parseInto(ih, 'tooth 20 implant');
+parseInto(ih, 'jump 13');
+parseInto(ih, '1 1 1 1 1 1');
+assert.deepEqual(ih.cur, { t: 14, s: 0 }, 'tinted teeth land in flow, only missing skips');
+assert.deepEqual(ih.teeth[14].slice(0, 3), [3, 2, 3], 'stored data kept under tint');
+// clear tooth wipes everything on it (status kept), one undo restores all
+const w = createState();
+parseInto(w, 'jump 14');
+parseInto(w, '3 2 3 bleeding');
+parseInto(w, 'mobility two');
+parseInto(w, 'clear tooth');
+assert.deepEqual(w.teeth[14], [null, null, null, null, null, null], 'depths wiped');
+assert.equal(w.bleed[14].every((b) => !b), true, 'bleed wiped');
+assert.equal(w.mob[14] ?? null, null, 'mob wiped');
+assert.deepEqual(w.cur, { t: 14, s: 0 }, 'cursor parked for re-chart');
+parseInto(w, 'undo');
+assert.deepEqual(w.teeth[14].slice(0, 3), [3, 2, 3], 'undo restores depths');
+assert.equal(w.bleed[14][2], true, 'undo restores bleed');
+assert.equal(w.mob[14], 2, 'undo restores mob');
+parseInto(w, 'tooth 15 implant');
+parseInto(w, 'clear tooth 15');
+assert.equal(w.absent[15], 'IMPLANT', 'status kept');
+assert.deepEqual(w.cur, { t: 15, s: 0 }, 'navigates to cleared tooth');
 console.log('perio.test ok');

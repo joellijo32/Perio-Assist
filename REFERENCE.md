@@ -103,11 +103,19 @@ Grades are consumed as grades, never depths.
 ## Tooth status
 
 - `missing` / `implant` — marks the current tooth
-  (missing blanks the column; implants keep charting)
+  (only missing renders blank and skips flow; tinted teeth probe normally)
 - `tooth 5 is missing` / `tooth 12 implant` / `tooth 5 present`
 - Bulk: `all teeth missing`, `all wisdom teeth missing`,
   `all upper teeth implant`, `all lower teeth present`
 - `present` clears the mark and restores charting
+
+## Implant health (manual override, tinted yellow/red/green)
+
+- `tooth 14 has peri-implantitis` / `periimplantitis` / `peri implantitis`
+  / `peri implant` / `PI` — red tint, tooth keeps charting (disease monitoring)
+- `tooth 14 recovered` / `healed` — green tint
+- Plain `implant` — yellow tint. Tinted teeth probe and chart normally;
+  only `missing` blanks and skips.
 
 ## Corrections
 
@@ -116,6 +124,8 @@ Grades are consumed as grades, never depths.
 - `correction 5 on mesial` — patch a site (site optional -> last depth)
 - `repeat` — re-enter the last set of values
 - `clear` / `scratch` — take back the single last entry
+- `clear tooth` / `clear tooth 14` — wipe the whole tooth (status kept),
+  cursor parks for re-charting; one `undo` restores everything
 - `undo` — take back the whole last utterance
 
 ## Negation
