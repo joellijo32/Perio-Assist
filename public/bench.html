@@ -62,7 +62,21 @@ function decodeOnce(model, ctx, pcm) {
     const rec = new model.KaldiRecognizer(16000, GRAMMAR);
     const texts = [];
     const frames = [];
-    rec.on('result', (m) => { if (m.result.text) texts.push(m.result.text); });
+    let tFirst = 0;
+    let lastAt = 0;
+    const done = (timedOut) => {
+      clearTimeout(timer);
+      clearInterval(iv);
+      try { rec.remove(); } catch (e) {}
+      resolve({ text: texts.join(' '), fedMs, frameP95: p95(frames), tFirst, timedOut });
+    };
+    rec.on('result', (m) => {
+      if (m.result.text) {
+        if (!texts.length) tFirst = performance.now();
+        texts.push(m.result.text);
+        lastAt = performance.now();
+      }
+    });
     let off = 0;
     const t0 = performance.now();
     while (off < pcm.length) {
@@ -75,21 +89,17 @@ function decodeOnce(model, ctx, pcm) {
       off += n;
     }
     const fedMs = performance.now() - t0;
-    const timer = setTimeout(() => { try { rec.remove(); } catch (e) {} resolve({ text: texts.at(-1) ?? '', fedMs, frameP95: p95(frames) }); }, 4000);
+    const timer = setTimeout(() => done(true), 6000);
     const iv = setInterval(() => {
-      if (texts.length) {
-        clearTimeout(timer); clearInterval(iv);
-        try { rec.remove(); } catch (e) {}
-        resolve({ text: texts.at(-1), fedMs, frameP95: p95(frames) });
-      }
-    }, 25);
+      if (texts.length && performance.now() - lastAt > 800) done(false);
+    }, 100);
   });
 }
 
 function wer(ref, hyp) {
   const r = ref.split(' '), h = hyp.split(' ');
   if (!r.length) return [0, 0];
-  let prev = h.map((_, j) => j);
+  let prev = Array.from({ length: h.length + 1 }, (_, j) => j);
   for (let i = 1; i <= r.length; i++) {
     const cur = [i];
     for (let j = 1; j <= h.length; j++) cur.push(Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (r[i - 1] !== h[j - 1] ? 1 : 0)));
@@ -109,19 +119,23 @@ document.getElementById('run').onclick = async () => {
   for (const [id, file, ref] of FILES) {
     const pcm = await decodeWav(ctx, await (await fetch(file)).arrayBuffer());
     const audioMs = (1000 * pcm.length) / 16000;
-    const e2es = [], fs = [];
-    let hyp = '';
+    await decodeOnce(model, ctx, pcm); // warmup: JIT + worker spin-up, unrecorded
+    const e2es = [], firsts = [], fs = [];
+    let hyp = '', timedOut = 0;
     for (let k = 0; k < REPS; k++) {
       const t0 = performance.now();
       const r = await decodeOnce(model, ctx, pcm);
       e2es.push(performance.now() - t0);
+      if (r.tFirst) firsts.push(r.tFirst - t0);
       fs.push(r.frameP95);
       hyp = r.text;
+      timedOut += r.timedOut ? 1 : 0;
     }
     const [e, n] = wer(ref, hyp);
     const e2e = med(e2es);
-    rows.push({ id, ref, hyp, e2eMs: Math.round(e2e), e2eP95: Math.round(p95(e2es)), audioMs: Math.round(audioMs), rtf: +(e2e / audioMs).toFixed(2), frameP95: +Math.max(...fs).toFixed(2), wer: `${e}/${n}` });
-    log(`${id}: e2e med ${Math.round(e2e)}ms p95 ${Math.round(p95(e2es))}ms audio ${Math.round(audioMs)}ms rtf ${(e2e / audioMs).toFixed(2)} frameP95 ${Math.max(...fs).toFixed(2)}ms wer ${e}/${n} hyp=${JSON.stringify(hyp)}`);
+    const first = firsts.length ? med(firsts) : -1;
+    rows.push({ id, ref, hyp, e2eMs: Math.round(e2e), e2eP95: Math.round(p95(e2es)), firstMs: Math.round(first), audioMs: Math.round(audioMs), rtf: +(e2e / audioMs).toFixed(2), frameP95: +Math.max(...fs).toFixed(2), wer: `${e}/${n}`, timeouts: timedOut });
+    log(`${id}: final med ${Math.round(e2e)}ms p95 ${Math.round(p95(e2es))}ms first ${Math.round(first)}ms audio ${Math.round(audioMs)}ms rtf ${(e2e / audioMs).toFixed(2)} frameP95 ${Math.max(...fs).toFixed(2)}ms wer ${e}/${n}${timedOut ? ` TIMEOUTx${timedOut}` : ''} hyp=${JSON.stringify(hyp)}`);
   }
   const all = rows.map((r) => r.e2eMs);
   log(`---\nmedian e2e ${med(all)}ms p95 ${p95(all)}ms`);
