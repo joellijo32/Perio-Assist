@@ -298,6 +298,6 @@ assert.deepEqual(ih.cur, { t: 19, s: 0 }, 'missing skipped on arrival');
 parseInto(ih, 'tooth 20 implant');
 parseInto(ih, 'jump 13');
 parseInto(ih, '1 1 1 1 1 1');
-assert.deepEqual(ih.cur, { t: 16, s: 0 }, 'marked teeth (14 implant, 15 peri) skipped on arrival');
-assert.deepEqual(ih.teeth[14].slice(0, 3), [3, 2, 3], 'stored data kept, display blanks it');
+assert.deepEqual(ih.cur, { t: 14, s: 0 }, 'tinted teeth land in flow, only missing skips');
+assert.deepEqual(ih.teeth[14].slice(0, 3), [3, 2, 3], 'stored data kept under tint');
 console.log('perio.test ok');

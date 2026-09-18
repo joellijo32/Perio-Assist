@@ -8,8 +8,6 @@
   const cal = (t, s) => (store.teeth[t][s] == null ? null : store.teeth[t][s] + store.rec[t][s]);
   // ponytail: MISSING blanks the column visually; stored values are kept so present/undo restores them
   const isMissing = (t) => store.absent[t] === 'MISSING';
-  // ponytail: every marked tooth renders blank (tints only) - values stay in store, same as missing
-  const blanked = (t) => !!store.absent[t];
   // ponytail: implant-health tints - color carries meaning, same translucency as missing
   const tint = (t) =>
     store.absent[t] === 'IMPLANT' ? 'st-implant'
@@ -21,10 +19,9 @@
 
 {#snippet brow(t, s)}
   {@const missing = isMissing(t)}
-  {@const blank = blanked(t)}
-  {@const v = blank ? null : store.teeth[t][s]}
-  {@const pv = blank ? undefined : preview.teeth?.[t]?.[s]}
-  {@const pb = blank ? undefined : preview.bleed?.[t]?.[s]}
+  {@const v = missing ? null : store.teeth[t][s]}
+  {@const pv = missing ? undefined : preview.teeth?.[t]?.[s]}
+  {@const pb = missing ? undefined : preview.bleed?.[t]?.[s]}
   {@const diffVal = pv !== undefined && pv !== v}
   {@const diffBleed = pb !== undefined && pb !== store.bleed[t][s]}
   {@const sel = store.cur.t === t && store.cur.s === s}
@@ -38,11 +35,11 @@
     title={`${t} ${SITENAMES[s]}${store.rec[t][s] ? `, rec ${store.rec[t][s]}` : ''}${store.sup[t][s] ? ', suppuration' : ''}${store.plaque[t][s] ? ', plaque' : ''}`}
   >
     <span class="dots">
-      {#if !blank && (diffBleed ? pb : store.bleed[t][s])}<i class="dot bop" class:faded={diffBleed && !store.bleed[t][s]}></i>{/if}
-      {#if !blank && store.sup[t][s]}<i class="dot sup"></i>{/if}
-      {#if !blank && store.plaque[t][s]}<i class="dot pi"></i>{/if}
+      {#if !missing && (diffBleed ? pb : store.bleed[t][s])}<i class="dot bop" class:faded={diffBleed && !store.bleed[t][s]}></i>{/if}
+      {#if !missing && store.sup[t][s]}<i class="dot sup"></i>{/if}
+      {#if !missing && store.plaque[t][s]}<i class="dot pi"></i>{/if}
     </span>
-    <span class:faded={diffVal}>{blank ? '' : (diffVal ? (pv ?? '·') : (v ?? '·'))}</span>
+    <span class:faded={diffVal}>{missing ? '' : (diffVal ? (pv ?? '·') : (v ?? '·'))}</span>
   </button>
 {/snippet}
 
@@ -62,7 +59,6 @@
     {#each teeth as t (t)}
       {@const cls = tint(t)}
       {@const missing = isMissing(t)}
-      {@const blank = blanked(t)}
       <div class="tcol">
         <div class="thead" class:cur={store.cur.t === t} class:miss={missing}>
           <b>{t}</b><span>{marks(t)}</span>
@@ -74,13 +70,13 @@
         </div>
         <div class="tgroup" class:miss={missing}>
           {#each first.sites as s (s)}
-            <div class="gm">{blank ? '' : store.rec[t][s] || ''}</div>
+            <div class="gm">{missing ? '' : store.rec[t][s] || ''}</div>
           {/each}
         </div>
         <div class="tgroup" class:miss={missing}>
           {#each first.sites as s (s)}
-            {@const c = blank ? null : cal(t, s)}
-            <div class="cal" class:flag={c != null && c >= 4}>{c ?? (blank ? '' : '—')}</div>
+            {@const c = missing ? null : cal(t, s)}
+            <div class="cal" class:flag={c != null && c >= 4}>{c ?? (missing ? '' : '—')}</div>
           {/each}
         </div>
         <div class="tgroup" class:miss={missing}>
@@ -90,17 +86,17 @@
         </div>
         <div class="tgroup" class:miss={missing}>
           {#each second.sites as s (s)}
-            <div class="gm">{blank ? '' : store.rec[t][s] || ''}</div>
+            <div class="gm">{missing ? '' : store.rec[t][s] || ''}</div>
           {/each}
         </div>
         <div class="tgroup" class:miss={missing}>
           {#each second.sites as s (s)}
-            {@const c = blank ? null : cal(t, s)}
-            <div class="cal" class:flag={c != null && c >= 4}>{c ?? (blank ? '' : '—')}</div>
+            {@const c = missing ? null : cal(t, s)}
+            <div class="cal" class:flag={c != null && c >= 4}>{c ?? (missing ? '' : '—')}</div>
           {/each}
         </div>
-        <div class="tgroup" class:miss={missing}><div class="mob">{blank ? '' : store.mob[t] ?? ''}</div></div>
-        <div class="tgroup" class:miss={missing}><div class="mob">{blank ? '' : store.fur[t]?.grade ?? ''}</div></div>
+        <div class="tgroup" class:miss={missing}><div class="mob">{missing ? '' : store.mob[t] ?? ''}</div></div>
+        <div class="tgroup" class:miss={missing}><div class="mob">{missing ? '' : store.fur[t]?.grade ?? ''}</div></div>
         {#if cls}<div class="tint {cls}" aria-hidden="true"></div>{/if}
       </div>
     {/each}
