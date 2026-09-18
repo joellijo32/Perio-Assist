@@ -1,9 +1,43 @@
 <script>
-  import { moveTo, preview, SITENAMES, store } from './chart.svelte.js';
+  import { commit, moveTo, preview, SITENAMES, store } from './chart.svelte.js';
 
   // ponytail: Open Dental data-chart rows - probing + dots, GM, auto-CAL, mobility, furcation
   const UPPER = Array.from({ length: 16 }, (_, i) => i + 1);
   const LOWER = Array.from({ length: 16 }, (_, i) => 32 - i);
+
+  // ponytail: one editor at a time - click selects, click again (or Enter) types; PD cells only
+  let editing = $state(null);
+  let draftVal = $state('');
+
+  function focusSelect(el) {
+    el.focus();
+    el.select();
+  }
+
+  function cellClick(t, s) {
+    if (store.cur.t === t && store.cur.s === s && !editing && !isMissing(t)) {
+      draftVal = store.teeth[t][s] ?? '';
+      editing = { t, s };
+    } else {
+      editing = null;
+      moveTo(t, s);
+    }
+  }
+
+  function commitCell() {
+    if (!editing) return;
+    const { t, s } = editing;
+    const raw = draftVal.trim();
+    editing = null;
+    const v = Number(raw);
+    if (raw === '' || !Number.isInteger(v) || v < 0 || v > 12) {
+      if (raw !== '') store.status = `PD ${raw}mm outside range 0-12`;
+      return;
+    }
+    // ponytail: typed input rides the voice path (move + commit) - undo/history free
+    moveTo(t, s);
+    commit(String(v));
+  }
 
   const cal = (t, s) => (store.teeth[t][s] == null ? null : store.teeth[t][s] + store.rec[t][s]);
   // ponytail: MISSING blanks the column visually; stored values are kept so present/undo restores them
@@ -25,13 +59,31 @@
   {@const diffVal = pv !== undefined && pv !== v}
   {@const diffBleed = pb !== undefined && pb !== store.bleed[t][s]}
   {@const sel = store.cur.t === t && store.cur.s === s}
+  {@const ed = editing && editing.t === t && editing.s === s}
+  {#if ed}
+    <input
+      class="pd ed"
+      bind:value={draftVal}
+      inputmode="numeric"
+      maxlength="2"
+      aria-label={`Probing depth tooth ${t} ${SITENAMES[s]}`}
+      use:focusSelect
+      onkeydown={(e) => {
+        if (e.key === 'Enter') commitCell();
+        else if (e.key === 'Escape') editing = null;
+        e.stopPropagation();
+      }}
+      onblur={() => (editing = null)}
+      onclick={(e) => e.stopPropagation()}
+    />
+  {:else}
   <button
     class="pd"
     class:sel
     class:miss={missing}
     class:flag={!missing && v != null && v >= 4}
     class:pre={diffVal || diffBleed}
-    onclick={() => moveTo(t, s)}
+    onclick={() => cellClick(t, s)}
     title={`${t} ${SITENAMES[s]}${store.rec[t][s] ? `, rec ${store.rec[t][s]}` : ''}${store.sup[t][s] ? ', suppuration' : ''}${store.plaque[t][s] ? ', plaque' : ''}`}
   >
     <span class="dots">
@@ -41,6 +93,7 @@
     </span>
     <span class:faded={diffVal}>{missing ? '' : (diffVal ? (pv ?? '·') : (v ?? '·'))}</span>
   </button>
+  {/if}
 {/snippet}
 
 {#snippet arch(jaw, teeth, first, second)}
@@ -152,6 +205,7 @@
   .pd.sel { outline: 2px solid #84bd00; background: #eff9d2; }
   .pd.flag { color: #c00; font-weight: bold; }
   .pd.miss { text-decoration: line-through; }
+  .pd.ed { width: 100%; box-sizing: border-box; text-align: center; outline: 2px solid #84bd00; }
   .dots { display: flex; gap: 3px; height: 7px; }
   .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
   .dot.bop { background: #c00; }

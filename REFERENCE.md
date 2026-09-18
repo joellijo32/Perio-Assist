@@ -129,6 +129,14 @@ Grades are consumed as grades, never depths.
 - `undo` — take back the whole last utterance
 - `stop` — stop listening (records anything said before it in the same breath)
 
+## Typing in the chart
+
+- Click a cell to move the cursor there; click the selected cell again
+  (or press Enter) to type a probing depth (0-12)
+- Enter commits (goes through the voice path, so `undo` works);
+  Escape or clicking away cancels; out-of-range input warns
+- GM, mobility, and furcation stay voice/type-in-box only
+
 ## Negation
 
 - `no bleeding` / `not bleeding` / `without bleeding` — explicitly
