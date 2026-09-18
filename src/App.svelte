@@ -131,7 +131,7 @@
 <div class="page">
   <header class="hero">
     <div class="brand">
-        <span class="logo">VoicePerio.</span>
+        <span class="logo">PerioVoice.</span>
         <span class="subtitle">Automatic Perio Charting</span>
     </div>
     <div
