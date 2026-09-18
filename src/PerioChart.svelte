@@ -216,4 +216,11 @@
   .cal.flag { color: #c00; font-style: normal; font-weight: bold; }
   .pd.pre { border-color: #6af; background: #f0f8ff; opacity: 0.5; font-style: italic; font-weight: 100; }
   .faded { opacity: 0.5; font-style: italic; font-weight: 100; }
+  /* ponytail: mobile keeps full chart density and scrolls instead - desktop rules above are untouched */
+  @media (max-width: 720px) {
+    .arch { overflow-x: auto; }
+    .tcol { min-width: 68px; }
+    .labcol { position: sticky; left: 0; z-index: 5; background: #fff; }
+    .pd { min-height: 34px; font-size: 16px; }
+  }
 </style>
