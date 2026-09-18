@@ -25,8 +25,15 @@ export function commit(text) {
   if (r.hint) store.status = r.hint;
 }
 
-export function resetAll() {
-  const fresh = createState();
+// ponytail: click navigation mirrors the parser's explicit navs (cursor + aspect, no stale overflow)
+export function moveTo(t, s) {
+  store.cur = { t, s };
+  store.aspect = s < 3 ? 'facial' : 'lingual';
+  store.aspectSet = true;
+  store.overflowed = false;
+}
+
+export function resetAll() {  const fresh = createState();
   store.teeth = fresh.teeth;
   store.bleed = fresh.bleed;
   store.cur = fresh.cur;

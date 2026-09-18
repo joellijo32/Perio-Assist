@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import { commit, resetAll, say, SITENAMES, store } from './chart.svelte.js';
   import { createRecognizer } from './recognizer.js';
+  import PerioChart from './PerioChart.svelte';
 
   let engine = $state('vosk');
   let draft = $state('');
@@ -9,6 +10,29 @@
   const teethDone = $derived(
     Object.values(store.teeth).filter((sites) => sites.some((v) => v !== null)).length,
   );
+
+  // ponytail: summary stats are pure derivations - no stats engine until one is needed
+  const bop = $derived.by(() => {
+    let hit = 0, total = 0;
+    for (const t of Object.keys(store.teeth)) {
+      if (store.absent[t]) continue;
+      for (let s = 0; s < 6; s++) {
+        if (store.teeth[t][s] == null) continue;
+        total++;
+        if (store.bleed[t][s]) hit++;
+      }
+    }
+    return { hit, total, pct: total ? Math.round((100 * hit) / total) : 0 };
+  });
+
+  const maxPD = $derived.by(() => {
+    let m = 0;
+    for (const t of Object.keys(store.teeth)) {
+      if (store.absent[t]) continue;
+      for (const v of store.teeth[t]) if (v != null && v > m) m = v;
+    }
+    return m;
+  });
 
   const recognizer = createRecognizer({
     onPartial: (text) => say(text, false),
@@ -36,14 +60,6 @@
     draft = '';
   }
 
-  function cellClass(v, bled, rec, sp) {
-    return `s${v >= 6 ? ' g6' : v >= 4 ? ' g4' : ''}${bled ? ' bleed' : ''}${rec > 0 ? ' rc' : ''}${sp ? ' sp' : ''}`;
-  }
-
-  function toothMarks(t) {
-    return `${store.absent[t] ? '*' : ''}${store.mob[t] != null ? ` M${store.mob[t]}` : ''}${store.fur[t] ? ` F${['','I','II','III'][store.fur[t].grade]}` : ''}`;
-  }
-
   onDestroy(() => recognizer.stop());
 </script>
 
@@ -58,23 +74,13 @@
   <div class="meta">
     <span>Tooth {store.cur.t} · {SITENAMES[store.cur.s]} ({store.cur.s + 1}/6)</span>
     <span>{teethDone}/32 teeth</span>
+    <span>BOP {bop.pct}% ({bop.hit}/{bop.total})</span>
+    <span>max PD {maxPD}</span>
     {#if store.latencyMs !== null}<span>{store.latencyMs.toFixed(0)}ms parse+render</span>{/if}
   </div>
 
-  <div class="legend">MB mesiobuccal · B buccal · DB distobuccal · ML mesiolingual · L lingual · DL distolingual · dotted top = recession · left bar = suppuration · * = missing/implant · M = mobility · F = furcation</div>
-  <div id="grid">
-    {#each Object.entries(store.teeth) as [t, sites] (t)}
-      <div class="t" class:cur={+t === store.cur.t} class:miss={!!store.absent[t]}>
-        <b>{t}{toothMarks(t)}</b><br />
-        {#each sites as v, s (s)}
-          <span
-            class={cellClass(v, store.bleed[t][s], store.rec[t][s], store.sup[t][s])}
-            title={`${t} ${SITENAMES[s]}${store.rec[t][s] ? `, rec ${store.rec[t][s]}` : ''}${store.sup[t][s] ? ', suppuration' : ''}`}
-          >{v ?? '.'}</span>
-        {/each}
-      </div>
-    {/each}
-  </div>
+  <div class="legend">MB mesiobuccal · B buccal · DB distobuccal · ML mesiolingual · L lingual · DL distolingual · red dot = bleeding · yellow dot = suppuration · * = missing/implant · M = mobility · F = furcation · click a cell to move the cursor</div>
+  <PerioChart />
 
   <input
     bind:value={draft}
@@ -92,17 +98,7 @@
   main { font-family: system-ui; margin: 16px; max-width: 1200px; }
   button, select { padding: 8px 12px; }
   .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .meta { display: flex; gap: 16px; margin: 8px 0; }
-  #grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin: 12px 0; }
-  .t { border: 1px solid #ccc; padding: 4px; font-size: 12px; }
-  .t.cur { outline: 2px solid blue; }
-  .s { display: inline-block; width: 18px; text-align: center; margin: 1px; background: #eee; }
-  .s.bleed { border-bottom: 3px solid red; }
-  .s.rc { border-top: 2px dotted #1976d2; }
-  .s.sp { border-left: 3px solid #7b1fa2; }
-  .t.miss { opacity: 0.45; }
-  .g4 { background: #ffeb3b; }
-  .g6 { background: #ef9a9a; }
+  .meta { display: flex; gap: 16px; margin: 8px 0; flex-wrap: wrap; }
   input { width: 100%; padding: 8px; box-sizing: border-box; }
   #tx { border: 1px solid #ddd; min-height: 60px; padding: 8px; margin-top: 8px; }
   .i { opacity: 0.5; font-style: italic; }
