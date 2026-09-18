@@ -72,7 +72,10 @@ patient generator), `cases.js` (38 TCs), `acoustic-eval/` (TTS harness).
   tooth untouched, rewinds instead of spilling.
 - **Status**: `missing`/`implant` land (implants carry charting); sequential
   `advance`/`next` skip absent teeth. `present` clears. Bulk forms
-  (`all wisdom/upper/lower teeth …`) share `markAbsent`. All status writes
+  (`all wisdom/upper/lower teeth …`) share `markAbsent`. Implant health is
+  manual override words only: `peri[- ]implantitis` (red), `recovered`/
+  `healed` (green), plain `implant` (yellow) — all chartable; ONLY
+  `MISSING` skips sequential flow or stats. All status writes
   are hist entries → undoable.
 - **Undo model**: utterance-level groups over a kind-tagged hist
   (`depth`/`bleed`/`rec`/`sup`/`plaque`/`absent`, each with `prev`);

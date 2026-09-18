@@ -109,6 +109,14 @@ Grades are consumed as grades, never depths.
   `all upper teeth implant`, `all lower teeth present`
 - `present` clears the mark and restores charting
 
+## Implant health (manual override, tinted yellow/red/green)
+
+- `tooth 14 has peri-implantitis` / `periimplantitis` / `peri implantitis`
+  — red tint, tooth keeps charting (disease monitoring)
+- `tooth 14 recovered` / `healed` — green tint
+- Plain `implant` — yellow tint. Only `missing` is ever skipped in
+  sequential flow; everything tinted still gets probed.
+
 ## Corrections
 
 - `change last to 5` — patch the last depth recorded

@@ -100,6 +100,7 @@ function quadToothToUni(quad, ord, type) {
 
 // ponytail: one status writer - present clears, the rest mark; undo restores via prev
 function markAbsent(state, ids, word) {
+  if (word === 'healed') word = 'recovered';
   for (const t of ids) {
     if (word === 'present') {
       if (state.absent[t] == null) continue;
@@ -152,7 +153,8 @@ export function createState() {
 }
 
 function skipAbsent(state) {
-  while (state.absent[state.cur.t] && state.cur.t < 32) { state.cur.t++; state.cur.s = 0; }
+  // ponytail: only MISSING skips - tinted teeth (implant/peri-implantitis/recovered) still get probed
+  while (state.absent[state.cur.t] === 'MISSING' && state.cur.t < 32) { state.cur.t++; state.cur.s = 0; }
 }
 
 function advance(state, n = 1) {
@@ -596,7 +598,7 @@ export function parseInto(state, text) {
           break;
         }
         const tk = skipFiller(toks, kk);
-        if (tmp.length && ['missing', 'implant', 'present', 'mobility', 'are', 'is'].includes(toks[tk])) {
+        if (tmp.length && ['missing', 'implant', 'present', 'periimplantitis', 'mobility', 'are', 'is'].includes(toks[tk])) {
           listed.push(...tmp);
           k = kk;
         }
@@ -606,11 +608,21 @@ export function parseInto(state, text) {
       state.aspect = 'facial';
       state.aspectSet = false;
       k = skipFiller(toks, k); // "tooth 5 is missing" / "are missing"
-      if (toks[k] === 'missing' || toks[k] === 'implant' || toks[k] === 'present') {
+      // ponytail: "peri implantitis" arrives split (hyphens tokenize) - pair it before single words
+      if (toks[k] === 'peri' && toks[k + 1] === 'implantitis') {
+        markAbsent(state, listed, 'periimplantitis');
+        i = k + 1;
+      } else if (['missing', 'implant', 'present', 'periimplantitis', 'recovered', 'healed'].includes(toks[k])) {
         markAbsent(state, listed, toks[k]);
         i = k;
         // ponytail: land, don't skip - implants carry charting; sequential flow skips via advance/next
       } else i = k - 1;
+      continue;
+    }
+    if (w === 'peri' && toks[i + 1] === 'implantitis') {
+      flush();
+      markAbsent(state, [state.cur.t], 'periimplantitis');
+      i++;
       continue;
     }
     if (w === 'all' || w === 'are') {
@@ -627,7 +639,7 @@ export function parseInto(state, text) {
       }
       if (ids) {
         const k = skipFiller(toks, j);
-        if (toks[k] === 'missing' || toks[k] === 'implant' || toks[k] === 'present') {
+        if (['missing', 'implant', 'present', 'periimplantitis', 'recovered', 'healed'].includes(toks[k])) {
           flush();
           markAbsent(state, ids, toks[k]);
           i = k;
@@ -636,10 +648,9 @@ export function parseInto(state, text) {
       }
       continue; // bare "all" ("all buccal 2-2-2") - nothing to do, rest flows normally
     }
-    if (w === 'missing' || w === 'implant') {
+    if (w === 'missing' || w === 'implant' || w === 'periimplantitis' || w === 'recovered' || w === 'healed') {
       flush();
-      state.hist.push({ t: state.cur.t, s: 0, kind: 'absent', prev: state.absent[state.cur.t] ?? null });
-      state.absent[state.cur.t] = w.toUpperCase();
+      markAbsent(state, [state.cur.t], w);
       continue;
     }
     if (w === 'upper' || w === 'lower') {

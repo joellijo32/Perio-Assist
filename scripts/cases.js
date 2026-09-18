@@ -189,5 +189,15 @@ T('TC-036', 'Tooth 8, buccal 2–2–2, lingual 2–2–2, no bleeding.', (s) =>
   eq(s.teeth[8], [2, 2, 2, 2, 2, 2], 'en-dash normalised');
 });
 
+// --- implant health states (manual override words + tints) ---
+T('IMP-01', 'Tooth 14 implant, buccal 3-3-3, lingual 3-3-3. Tooth 14 has peri-implantitis. Tooth 14 recovered.', (s) => {
+  eq(s.absent[14], 'RECOVERED', 'final state recovered');
+  eq(s.teeth[14], [3, 3, 3, 3, 3, 3], 'implant charting kept');
+});
+T('IMP-02', 'Tooth 30 periimplantitis, buccal 5-6-5, lingual 4-5-4, bleeding all.', (s) => {
+  eq(s.absent[30], 'PERIIMPLANTITIS', 'single-word form');
+  eq(s.bleed[30].every(Boolean), true, 'diseased implant still probed + flagged');
+});
+
 console.log(`\n${pass} pass, ${fail} fail, ${skip} skip (out of scope)`);
 process.exit(fail ? 1 : 0);

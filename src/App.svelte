@@ -18,7 +18,7 @@
     let hit = 0,
       total = 0;
     for (const t of Object.keys(store.teeth)) {
-      if (store.absent[t]) continue;
+      if (store.absent[t] === 'MISSING') continue;
       for (let s = 0; s < 6; s++) {
         if (store.teeth[t][s] == null) continue;
         total++;
@@ -32,7 +32,7 @@
     let hit = 0,
       total = 0;
     for (const t of Object.keys(store.teeth)) {
-      if (store.absent[t]) continue;
+      if (store.absent[t] === 'MISSING') continue;
       for (let s = 0; s < 6; s++) {
         if (store.teeth[t][s] == null) continue;
         total++;
@@ -45,7 +45,7 @@
   const maxPD = $derived.by(() => {
     let m = 0;
     for (const t of Object.keys(store.teeth)) {
-      if (store.absent[t]) continue;
+      if (store.absent[t] === 'MISSING') continue;
       for (const v of store.teeth[t]) if (v != null && v > m) m = v;
     }
     return m;
@@ -179,6 +179,7 @@
       </div>
       <aside class="legend">
         <span class="lgroup"><b>Findings</b> <i class="sw bop"></i> bleeding <i class="sw sup"></i> suppuration <i class="sw pi"></i> plaque</span>
+        <span class="lgroup"><b>Implant</b> <i class="sw st-implant"></i> implant <i class="sw st-peri"></i> peri-implantitis <i class="sw st-recovered"></i> recovered</span>
       </aside>
     </div>
     <div class="chartwrap"><PerioChart /></div>
@@ -262,6 +263,9 @@
   .sw.bop { background: #c00; }
   .sw.sup { background: #e6a800; }
   .sw.pi { background: #1976d2; }
+  .sw.st-implant { background: rgba(230, 168, 0, 0.85); border-radius: 2px; }
+  .sw.st-peri { background: rgba(204, 0, 0, 0.85); border-radius: 2px; }
+  .sw.st-recovered { background: rgba(46, 125, 50, 0.85); border-radius: 2px; }
   .chartwrap { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; margin-top: 6px; overflow-y: auto; }
   .overlay {
     position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55);
