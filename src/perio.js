@@ -96,6 +96,26 @@ function quadToothToUni(quad, ord, type) {
   return base + dir * idx;
 }
 
+// ponytail: one status writer - present clears, the rest mark; undo restores via prev
+function markAbsent(state, ids, word) {
+  for (const t of ids) {
+    if (word === 'present') {
+      if (state.absent[t] == null) continue;
+      state.hist.push({ t, s: 0, kind: 'absent', prev: state.absent[t] });
+      delete state.absent[t];
+    } else {
+      state.hist.push({ t, s: 0, kind: 'absent', prev: state.absent[t] ?? null });
+      state.absent[t] = word.toUpperCase();
+    }
+  }
+}
+
+const TOOTH_GROUPS = {
+  wisdom: [1, 16, 17, 32],
+  upper: Array.from({ length: 16 }, (_, i) => i + 1),
+  lower: Array.from({ length: 16 }, (_, i) => i + 17),
+};
+
 // ponytail: one tooth resolver for jump + announcements - composites included
 function resolveTooth(toks, i) {
   let j = i;
@@ -457,7 +477,7 @@ export function parseInto(state, text) {
       } else hint ??= 'mobility mentioned but no grade heard';
       continue;
     }
-    if (w === 'suppuration') {
+    if (w === 'suppuration' || w === 'pus') {
       const hadPending = nums.length > 0;
       flush();
       const t = condTooth(state, hadPending);
@@ -542,7 +562,7 @@ export function parseInto(state, text) {
           break;
         }
         const tk = skipFiller(toks, kk);
-        if (tmp.length && ['missing', 'implant', 'mobility', 'are', 'is'].includes(toks[tk])) {
+        if (tmp.length && ['missing', 'implant', 'present', 'mobility', 'are', 'is'].includes(toks[tk])) {
           listed.push(...tmp);
           k = kk;
         }
@@ -552,15 +572,34 @@ export function parseInto(state, text) {
       state.aspect = 'facial';
       state.aspectSet = false;
       k = skipFiller(toks, k); // "tooth 5 is missing" / "are missing"
-      if (toks[k] === 'missing' || toks[k] === 'implant') {
-        for (const t of listed) {
-          state.hist.push({ t, s: 0, kind: 'absent', prev: state.absent[t] ?? null });
-          state.absent[t] = toks[k].toUpperCase();
-        }
+      if (toks[k] === 'missing' || toks[k] === 'implant' || toks[k] === 'present') {
+        markAbsent(state, listed, toks[k]);
         i = k;
         // ponytail: land, don't skip - implants carry charting; sequential flow skips via advance/next
       } else i = k - 1;
       continue;
+    }
+    if (w === 'all') {
+      // ponytail: bulk status ("all wisdom teeth missing") - no status word, no consume
+      let j = skipFiller(toks, i + 1);
+      let ids = null;
+      if (toks[j] === 'teeth') {
+        ids = TOOTH_GROUPS.upper.concat(TOOTH_GROUPS.lower);
+        j++;
+      } else if (toks[j] in TOOTH_GROUPS && toks[j + 1] === 'teeth') {
+        ids = TOOTH_GROUPS[toks[j]];
+        j += 2;
+      }
+      if (ids) {
+        const k = skipFiller(toks, j);
+        if (toks[k] === 'missing' || toks[k] === 'implant' || toks[k] === 'present') {
+          flush();
+          markAbsent(state, ids, toks[k]);
+          i = k;
+          continue;
+        }
+      }
+      continue; // bare "all" ("all buccal 2-2-2") - nothing to do, rest flows normally
     }
     if (w === 'missing' || w === 'implant') {
       flush();

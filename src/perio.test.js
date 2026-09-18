@@ -222,4 +222,18 @@ assert.equal(f.sup[6][1], true, 'real suppuration intact');
 // observed live mishearing: "furcation" -> "vocation" (verified on user recording, both models)
 parseInto(f, 'tooth 5 vocation class three on lingual');
 assert.deepEqual(f.fur[5], { grade: 3, side: 'lingual' }, 'vocation alias');
+// bulk status + present + pus alias
+const g = createState();
+parseInto(g, 'all wisdom teeth missing');
+assert.deepEqual([g.absent[1], g.absent[16], g.absent[17], g.absent[32]], ['MISSING', 'MISSING', 'MISSING', 'MISSING'], 'wisdom bulk');
+assert.equal(g.absent[2] ?? null, null, 'neighbors untouched');
+parseInto(g, 'tooth 16 is present');
+assert.equal(g.absent[16] ?? null, null, 'present clears');
+parseInto(g, 'all upper teeth missing');
+assert.equal(g.absent[5], 'MISSING', 'upper bulk');
+parseInto(g, 'undo');
+assert.equal(g.absent[5] ?? null, null, 'bulk undo clears all');
+assert.equal(g.absent[6] ?? null, null, 'bulk undo clears all (2)');
+parseInto(g, 'tooth 30 pus at mid-buccal');
+assert.equal(g.sup[30][1], true, 'pus alias');
 console.log('perio.test ok');
