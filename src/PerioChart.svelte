@@ -98,6 +98,7 @@
         <div class="tgroup" class:miss={missing}><div class="mob">{missing ? '' : store.mob[t] ?? ''}</div></div>
         <div class="tgroup" class:miss={missing}><div class="mob">{missing ? '' : store.fur[t]?.grade ?? ''}</div></div>
         {#if cls}<div class="tint {cls}" aria-hidden="true"></div>{/if}
+        {#if missing}<div class="strike" aria-hidden="true"></div>{/if}
       </div>
     {/each}
   </div>
@@ -133,6 +134,10 @@
   .thead.miss { opacity: 0.45; }
   /* ponytail: overlay is absolutely positioned inside its own tooth column - no grid math to get wrong */
   .tint { position: absolute; inset: 0; pointer-events: none; z-index: 10; border-radius: 8px; }
+  .strike {
+    position: absolute; inset: 0; pointer-events: none; z-index: 10;
+    background: linear-gradient(to top right, transparent calc(50% - 1px), #888 calc(50% - 1px), #888 calc(50% + 1px), transparent calc(50% + 1px));
+  }
   .tint.st-implant { background: rgba(230, 168, 0, 0.38); }
   .tint.st-peri { background: rgba(204, 0, 0, 0.3); }
   .tint.st-recovered { background: rgba(46, 125, 50, 0.32); }
