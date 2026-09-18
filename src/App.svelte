@@ -103,6 +103,22 @@
   // ponytail: at most one summary in flight - the flag flips in the same tick as speak(), never across a timeout
   let ttsActive = false;
 
+  // ponytail: prefer on-device English voices - network voices stall and glitch (notably Firefox)
+  let ttsVoice = null;
+  function pickVoice() {
+    try {
+      const vs = window.speechSynthesis?.getVoices() ?? [];
+      ttsVoice =
+        vs.find((v) => v.lang?.toLowerCase().startsWith('en') && v.localService) ??
+        vs.find((v) => v.lang?.toLowerCase().startsWith('en')) ??
+        null;
+    } catch { ttsVoice = null; }
+  }
+  try {
+    pickVoice();
+    if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = pickVoice;
+  } catch { /* voice picker unavailable - default voice stands */ }
+
   function speakFeedback(phrase, beepMs) {
     if (!speak || !phrase || ttsActive) return;
     let synth = null;
@@ -120,9 +136,12 @@
       done = true;
       ttsActive = false;
       if (poll) clearInterval(poll);
-      recognizer.resume().then((ok) => {
-        if (!ok) store.listening = false;
-      });
+      // ponytail: tail decay - utterance tails and end-glitches must die out before the mic goes live
+      setTimeout(() => {
+        recognizer.resume().then((ok) => {
+          if (!ok) store.listening = false;
+        });
+      }, 350);
     };
     u.onend = u.onerror = () => finish();
     setTimeout(() => {
@@ -130,7 +149,7 @@
         // ponytail: teardown must succeed and synth must be idle, or nothing speaks into a live mic
         if (ttsActive || synth.speaking || synth.pending || !recognizer.pause()) return;
         ttsActive = true;
-        synth.cancel();
+        if (ttsVoice) u.voice = ttsVoice;
         synth.speak(u);
         const speakStart = performance.now();
         poll = setInterval(() => {
