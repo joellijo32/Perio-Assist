@@ -2,36 +2,41 @@
 
 Voice-controlled periodontal charting. Hygienist speaks probing depths +
 conditions hands-free; the chart fills in real time (<300ms mic→pixels),
-no assistant needed. Single-page app, no backend, works offline after
+solo or with a team. Single-page app, no backend, works offline after
 first load.
+
+Repo root is hackathon shell (`README.md`, `assets/`, `slides.txt`,
+`backend/` is an intentional stub — static file server only). **The app
+lives in `frontend/` — all paths below are relative to it unless noted.**
 
 ## Stack
 
 - **Svelte 5** (runes: `$state`, `$derived`, snippets) + **Vite 6**, package
   manager is **pnpm** — never npm.
 - **STT engines** **vosk-browser** (on-device WASM, model in
-  `public/model.tar.gz`, gitignored, installed by `scripts/setup.sh`).
+  `frontend/public/model.tar.gz`, gitignored, installed by `scripts/setup.sh`).
 - Parser is dependency-free vanilla JS so it runs in node tests unchanged.
 
-## Setup & commands
+## Setup & commands (run from `frontend/`)
 
 ```sh
 pnpm setup            # one-time: downloads Vosk model into public/ (default: lgraph 130MB; --small/--all/--force)
 pnpm dev              # localhost dev server (mic requires localhost/https, never file://)
-pnpm test             # parser unit tests (node src/perio.test.js) - run before every commit
+pnpm test             # unit tests (perio + feedback, assert-based, no framework) - run before every commit
 pnpm build            # production build (validates Svelte compile)
 pnpm eval             # synthetic text eval: transcripts + ground truth -> depth/bleed/rec/status scores
-pnpm cases            # 38 narrative test cases (periodontal_chart_test_cases.md) -> pass/fail/skip
+pnpm cases            # 38 narrative test cases (self-contained in scripts/cases.js) -> pass/fail/skip
 pnpm acoustic         # TTS fixtures x voices x noise profiles through real model+grammar -> WER + chart-match
 ```
 
-`scripts/setup.sh` never commits binaries (see `.gitignore`: `public/model*.tar.gz`,
-harness `models/`, `fixtures/`, `results.json`, `samples/`, `.venv/`).
+`scripts/setup.sh` never commits binaries (see `frontend/.gitignore`:
+`public/model*.tar.gz`, harness `models/`, `fixtures/`, `results.json`,
+`samples/`, `.venv/` — all relative to `frontend/`).
 `scripts/acoustic-eval/synth.py --regen/--repad` regenerates/pads fixtures
 (0.3s silence both ends — TTS starts instantly and unpadded fixtures bias
 onset WER; do not remove the padding).
 
-## Architecture (9 source files — keep it that way)
+## Architecture (13 source files — keep it that way)
 
 | File | Role |
 |---|---|
@@ -41,6 +46,8 @@ onset WER; do not remove the padding).
 | `src/recognizer.js` | Web Speech + Vosk engines behind one start/stop. Grammar imported from `grammar.json`. |
 | `src/grammar.json` | Vosk grammar word lists. **A word must be here or on-device Vosk emits `[unk]`** — parser aliases can't recover un-emitted words. |
 | `src/aliases.json` | User-editable mishearing map (`vocation`→`furcation`), applied at tokenize time. Never map syntax words (`are/is/to/and`) — see gotchas. |
+| `src/feedback.js` | Pure spoken-summary mapping (`feedbackText`) + `feedback.test.js`. No browser APIs. |
+| `src/export.js` | JSON report builder (`buildReport`, `downloadJson`, `reportFilename`) + `export.test.js`. DB-free by design. |
 | `src/PerioChart.svelte` | Open Dental-style data chart: arch sections (upper 1–16, lower 32–17), PD + BOP/suppuration/plaque dots, GM, auto-CAL, Mob/Furc rows, click-to-cursor. |
 | `src/App.svelte` | Shell: controls, summary strip (BOP%/PI%/max PD/teeth, all `$derived`), transcript, fallback type-in box. |
 | `src/main.js` | Mount only. |
@@ -122,8 +129,9 @@ patient generator), `cases.js` (38 TCs), `acoustic-eval/` (TTS harness).
    (repaired via grades-never-follow-those-words rule).
 6. **`advance()` skips absent teeth only on tooth arrival**, never mid-fill
    (or implant charting breaks). `skipAbsent` + explicit-land is the pairing.
-7. **Reference data has bugs.** `periodontal_chart_test_cases.md` TC-016
-   claims FDI 26 = Universal 12; it is 14 (consistent with its own TC-017).
+7. **Reference data has bugs.** `periodontal_chart_test_cases.md` (git history
+   only — `scripts/cases.js` is self-contained) TC-016 claims FDI 26 =
+   Universal 12; it is 14 (consistent with its own TC-017).
    Trust math over prose; the harness asserts 14 with a note.
 8. **Generator realism gaps** (`scripts/gen_clinical.py`): bleed verbalized
    only 80%, recession 70% — the residual eval misses are unwinnable by
@@ -133,7 +141,8 @@ patient generator), `cases.js` (38 TCs), `acoustic-eval/` (TTS harness).
 9. Rebase replays hashes → next push needs `--force-with-lease`. Never
    commit `public/model*.tar.gz`, harness heavies, or `samples/`.
 
-## Baselines (Sep 2026 laptop hardware — re-run, don't trust blindly)
+## Baselines (Sep 2026 laptop hardware — re-run, don't trust blindly.
+Methodology and honest scope for every number: see `EVAL.md`.)
 
 - `pnpm cases`: 33 pass, 0 fail, 7 skip (fan-out, stats/classification/
   sessions, Miller-note — documented in-file).
