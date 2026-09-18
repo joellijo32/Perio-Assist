@@ -44,7 +44,7 @@ export function createRecognizer({ onPartial, onFinal, onStatus, onStop }) {
       onStatus('Vosk lib not loaded (need internet once for CDN).');
       return false;
     }
-    onStatus('Loading on-device model (/model.tar.gz, ~40MB, first run only)...');
+    onStatus('Loading on-device model (/model.tar.gz, ~130MB, first run only)...');
     try {
       modelPromise ??= Vosk.createModel('/model.tar.gz');
       const model = await modelPromise;

@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "node src/perio.test.js",
     "eval": "node scripts/eval.js",
-    "cases": "node scripts/cases.js"
+    "cases": "node scripts/cases.js",
+    "setup": "./scripts/setup.sh"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
