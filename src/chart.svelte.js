@@ -1,4 +1,5 @@
 import { createState, parseInto, SITENAMES } from './perio.js';
+import { loadAll, remove, restore, saveAll, snapshot, upsert } from './db.js';
 
 export { SITENAMES };
 
@@ -17,6 +18,48 @@ export const store = $state({
 export const preview = $state({ teeth: null, bleed: null, cur: null });
 
 let nextId = 1;
+
+export const patients = $state(loadAll());
+export let activeId = $state(null);
+export let patientName = $state('');
+
+export function savePatient() {
+  const name = patientName.trim();
+  if (!name) { store.status = 'Name needed to save.'; return; }
+  const rec = upsert(patients, name, snapshot(store));
+  if (!saveAll(patients)) { store.status = 'Storage full — export & delete old.'; return; }
+  activeId = rec.id;
+  const done = Object.values(store.teeth).filter((s) => s.some((v) => v !== null)).length;
+  store.status = `Saved ${rec.name} (${done} teeth).`;
+}
+
+export function openPatient(id) {
+  const found = patients.find((p) => p.id === id);
+  if (!found) return;
+  restore(store, found.chart);
+  store.cur = { t: 1, s: 0 };
+  store.hist = [];
+  store.groups = [];
+  store.last = [];
+  store.overflowed = false;
+  store.transcript = [];
+  store.latencyMs = null;
+  activeId = found.id;
+  patientName = found.name;
+  store.status = `Opened ${found.name}.`;
+}
+
+export function deletePatient(id) {
+  remove(patients, id);
+  saveAll(patients);
+  if (activeId === id) { activeId = null; patientName = ''; }
+}
+
+export function newPatient() {
+  resetAll();
+  activeId = null;
+  patientName = '';
+}
 
 export function say(text, final) {
   store.transcript.unshift({ id: nextId++, text, final });
