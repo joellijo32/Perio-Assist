@@ -47,7 +47,7 @@
   <div class="aspect" style="grid-row: span 3">{name}</div>
   <div class="rlabel">PD</div>
   {#each teeth as t (t)}
-    <div class="tgroup {tint(t)}" class:miss={isMissing(t)}>
+    <div class="tgroup" class:miss={isMissing(t)}>
       {#each sites as s (s)}
         {@render brow(t, s)}
       {/each}
@@ -55,7 +55,7 @@
   {/each}
   <div class="rlabel">GM</div>
   {#each teeth as t (t)}
-    <div class="tgroup {tint(t)}" class:miss={isMissing(t)}>
+    <div class="tgroup" class:miss={isMissing(t)}>
       {#each sites as s (s)}
         <div class="gm">{isMissing(t) ? '' : store.rec[t][s] || ''}</div>
       {/each}
@@ -63,7 +63,7 @@
   {/each}
   <div class="rlabel">CAL</div>
   {#each teeth as t (t)}
-    <div class="tgroup {tint(t)}" class:miss={isMissing(t)}>
+    <div class="tgroup" class:miss={isMissing(t)}>
       {#each sites as s (s)}
         {@const c = isMissing(t) ? null : cal(t, s)}
         <div class="cal" class:flag={c != null && c >= 4}>{c ?? (isMissing(t) ? '' : '—')}</div>
@@ -77,7 +77,7 @@
     <div class="jaw" style="grid-row: span 9">{jaw}</div>
     <div class="corner">Tooth</div>
     {#each teeth as t (t)}
-      <div class="thead {tint(t)}" class:cur={store.cur.t === t} class:miss={isMissing(t)}>
+      <div class="thead" class:cur={store.cur.t === t} class:miss={isMissing(t)}>
         <b>{t}</b><span>{marks(t)}</span>
       </div>
     {/each}
@@ -85,11 +85,17 @@
     {@render block(second.name, teeth, second.sites)}
     <div class="rlabel span2">Mob</div>
     {#each teeth as t (t)}
-      <div class="tgroup {tint(t)}" class:miss={isMissing(t)}><div class="mob">{isMissing(t) ? '' : store.mob[t] ?? ''}</div></div>
+      <div class="tgroup" class:miss={isMissing(t)}><div class="mob">{isMissing(t) ? '' : store.mob[t] ?? ''}</div></div>
     {/each}
     <div class="rlabel span2">Furc</div>
     {#each teeth as t (t)}
-      <div class="tgroup {tint(t)}" class:miss={isMissing(t)}><div class="mob">{isMissing(t) ? '' : store.fur[t]?.grade ?? ''}</div></div>
+      <div class="tgroup" class:miss={isMissing(t)}><div class="mob">{isMissing(t) ? '' : store.fur[t]?.grade ?? ''}</div></div>
+    {/each}
+    {#each teeth as t, idx (t)}
+      {@const cls = tint(t)}
+      {#if cls}
+        <div class="tint {cls}" style={`grid-column: ${4 + idx}; grid-row: 1 / -1;`} aria-hidden="true"></div>
+      {/if}
     {/each}
   </div>
 {/snippet}
@@ -121,9 +127,11 @@
   .thead { text-align: center; font-size: 15px; padding: 3px 1px; border-bottom: 3px solid #314131; min-width: 0; font-family: Geist, Inter, Manrope, system-ui, sans-serif; }
   .thead.cur { border-bottom-color: #84bd00; background: #dff5a6; border-radius: 6px 6px 0 0; }
   .thead.miss { opacity: 0.45; }
-  .st-implant { opacity: 0.55; background: rgba(230, 168, 0, 0.28); border-radius: 6px; }
-  .st-peri { opacity: 0.55; background: rgba(204, 0, 0, 0.2); border-radius: 6px; }
-  .st-recovered { opacity: 0.55; background: rgba(46, 125, 50, 0.25); border-radius: 6px; }
+  /* ponytail: status overlays sit above the cells (clicks pass through) - stronger than bg tints */
+  .tint { pointer-events: none; z-index: 2; border-radius: 8px; }
+  .tint.st-implant { background: rgba(230, 168, 0, 0.38); border: 2px solid rgba(230, 168, 0, 0.9); }
+  .tint.st-peri { background: rgba(204, 0, 0, 0.3); border: 2px solid rgba(204, 0, 0, 0.9); }
+  .tint.st-recovered { background: rgba(46, 125, 50, 0.32); border: 2px solid rgba(46, 125, 50, 0.9); }
   .thead span { color: #a00; font-size: 12px; }
   .tgroup { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; min-width: 0; }
   .tgroup.miss { opacity: 0.45; }
