@@ -1,12 +1,17 @@
 """Decode fixtures with Vosk (same model + grammar as the app) and score.
 
 Profiles: clean | suction (10dB + bursts) | harsh (5dB). Seeded, deterministic.
-Metrics: WER overall, WER on digits, chart-match (hypothesis through parseInto
-vs reference through parseInto). Writes results.json for chartmatch.js.
+Metrics: WER overall, WER on digits, decode ms median/p95 + RTF, chart-match
+(hypothesis through parseInto vs reference through parseInto).
+Writes results.json for chartmatch.js.
+
+  run.py [--model-dir PATH]   default: setup-installed public/model.tar.gz
 """
 import json
 import os
+import sys
 import tarfile
+import time
 import wave
 
 import numpy as np
@@ -101,12 +106,14 @@ def is_digit_tok(t):
 
 
 def main():
-    model = Model(ensure_model())
+    model_dir = sys.argv[sys.argv.index('--model-dir') + 1] if '--model-dir' in sys.argv else ensure_model()
+    model = Model(model_dir)
     rec = KaldiRecognizer(model, 16000, GRAMMAR)
     rng = np.random.default_rng(7)
     results = []
     tot_e = tot_n = dig_e = dig_n = 0
     per_profile = {}
+    lat = []  # (profile, decode_ms, audio_ms)
     for fname in sorted(os.listdir(FIX)):
         if not fname.endswith('.wav'):
             continue
@@ -114,13 +121,17 @@ def main():
         with open(os.path.join(BASE, 'utterances.txt')) as f:
             ref = next(l.split('|', 1)[1].strip() for l in f if l.startswith(uid + ' |'))
         x = read_wav(os.path.join(FIX, fname))
+        audio_ms = 1000 * len(x) / 16000
         for pname, prof in PROFILES.items():
             y = add_noise(x, rng=rng, **prof) if prof else x
             rec.Reset()
             data = y.astype(np.int16).tobytes()
+            t0 = time.perf_counter()
             for off in range(0, len(data), 6400):
                 rec.AcceptWaveform(data[off : off + 6400])
             hyp = json.loads(rec.FinalResult()).get('text', '')
+            dt_ms = 1000 * (time.perf_counter() - t0)
+            lat.append((pname, dt_ms, audio_ms))
             e, n = wer(ref, hyp)
             r, h = norm_text(ref), norm_text(hyp)
             de = dn = 0
@@ -138,12 +149,20 @@ def main():
             dig_n += dn
             pe, pn, pde, pdn = per_profile.setdefault(pname, [0, 0, 0, 0])
             per_profile[pname] = [pe + e, pn + n, pde + de, pdn + dn]
-            results.append({'id': fname, 'profile': pname, 'ref': ref, 'hyp': hyp})
+            results.append({'id': fname, 'profile': pname, 'ref': ref, 'hyp': hyp, 'ms': round(dt_ms, 1)})
     with open(os.path.join(BASE, 'results.json'), 'w') as f:
         json.dump(results, f)
     print(f'overall WER {tot_e}/{tot_n} = {100 * tot_e / max(tot_n, 1):.1f}%   digits {dig_e}/{dig_n} = {100 * dig_e / max(dig_n, 1):.1f}%')
     for pname, (pe, pn, pde, pdn) in per_profile.items():
         print(f'  {pname:8s} WER {pe}/{pn} = {100 * pe / max(pn, 1):.1f}%   digits {pde}/{pdn} = {100 * pde / max(pdn, 1):.1f}%')
+    import statistics
+
+    all_ms = sorted(d for _, d, _ in lat)
+    all_rtf = sorted(d / a for _, d, a in lat)
+    print(f'decode ms median {statistics.median(all_ms):.0f} p95 {all_ms[min(len(all_ms) - 1, int(len(all_ms) * 0.95))]:.0f}   RTF median {statistics.median(all_rtf):.2f}')
+    for pname in PROFILES:
+        ds = sorted(d for p, d, _ in lat if p == pname)
+        print(f'  {pname:8s} decode median {statistics.median(ds):.0f}ms p95 {ds[min(len(ds) - 1, int(len(ds) * 0.95))]:.0f}ms')
 
 
 if __name__ == '__main__':

@@ -1,0 +1,136 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Voice Perio — acoustic bench</title>
+<script src="https://cdn.jsdelivr.net/npm/vosk-browser@0.0.5/dist/vosk.js"></script>
+<body>
+<h1>Acoustic bench (on-device Vosk)</h1>
+<p>Decodes 5 fixture wavs × 5 reps through the loaded <code>/model.tar.gz</code>.
+Swap models with <code>./scripts/setup.sh --small|--lgraph</code>, hard-refresh, run again.</p>
+<button id="run">Run benchmark</button>
+<button id="copy" disabled>Copy report</button>
+<pre id="out">idle</pre>
+<script>
+// ponytail: standalone bench page (no build step) - GRAMMAR mirrors src/grammar.json, update together
+const GRAMMAR = JSON.stringify([
+  "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty",
+  "bleeding bleed blood bop drop repeat jump go next back skip miss missing clear scratch undo tooth",
+  "mb b db ml l dl mesiobuccal buccal distobuccal mesiolingual lingual distolingual mesial distal at on",
+  "implant millimeter millimeters recession facial lingual correction change make last",
+  "mid all throughout no not without some any midbuccal probing noted",
+  "upper lower left right first second third molar premolar bicuspid canine cuspid lateral central wisdom",
+  "mobility slight moderate severe furcation vocation suppuration pus miller fdi teeth number through thru and are class present plaque pi",
+  "margin gm overgrowth hyperplasia minus plus negative positive",
+  "peri periimplantitis implantitis recovered healed",
+  "[unk]",
+]);
+const FILES = [
+  ['t01', 'bench/t01.Eddy.normal.wav', 'three two three'],
+  ['t30', 'bench/t30.Eddy.normal.wav', 'three two three bleeding'],
+  ['t12', 'bench/t12.Eddy.normal.wav', 'go to twenty four'],
+  ['t06', 'bench/t06.Eddy.normal.wav', 'bleeding'],
+  ['t27', 'bench/t27.Eddy.normal.wav', 'furcation class two on buccal'],
+];
+const REPS = 5;
+const CHUNK = 4000;
+const out = document.getElementById('out');
+const log = (s) => { out.textContent += s + '\n'; };
+const med = (a) => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
+const p95 = (a) => a.slice().sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(a.length * 0.95))];
+
+async function modelLabel() {
+  const r = await fetch('/model.tar.gz', { method: 'HEAD' });
+  const n = Number(r.headers.get('content-length') || 0);
+  return n > 80000000 ? `lgraph (~${Math.round(n / 1048576)}MB)` : `small (~${Math.round(n / 1048576)}MB)`;
+}
+
+function decodeWav(ctx, buf) {
+  return new Promise((res, rej) => {
+    ctx.decodeAudioData(
+      buf.slice(0),
+      (ab) => {
+        if (ab.sampleRate !== 16000) return rej(new Error('need 16kHz fixtures, got ' + ab.sampleRate));
+        res(ab.getChannelData(0));
+      },
+      rej,
+    );
+  });
+}
+
+function decodeOnce(model, ctx, pcm) {
+  return new Promise((resolve) => {
+    const rec = new model.KaldiRecognizer(16000, GRAMMAR);
+    const texts = [];
+    const frames = [];
+    rec.on('result', (m) => { if (m.result.text) texts.push(m.result.text); });
+    let off = 0;
+    const t0 = performance.now();
+    while (off < pcm.length) {
+      const n = Math.min(CHUNK, pcm.length - off);
+      const ab = ctx.createBuffer(1, n, 16000);
+      ab.copyToChannel(pcm.subarray(off, off + n), 0);
+      const f0 = performance.now();
+      try { rec.acceptWaveform(ab); } catch (e) { /* torn down */ }
+      frames.push(performance.now() - f0);
+      off += n;
+    }
+    const fedMs = performance.now() - t0;
+    const timer = setTimeout(() => { try { rec.remove(); } catch (e) {} resolve({ text: texts.at(-1) ?? '', fedMs, frameP95: p95(frames) }); }, 4000);
+    const iv = setInterval(() => {
+      if (texts.length) {
+        clearTimeout(timer); clearInterval(iv);
+        try { rec.remove(); } catch (e) {}
+        resolve({ text: texts.at(-1), fedMs, frameP95: p95(frames) });
+      }
+    }, 25);
+  });
+}
+
+function wer(ref, hyp) {
+  const r = ref.split(' '), h = hyp.split(' ');
+  if (!r.length) return [0, 0];
+  let prev = h.map((_, j) => j);
+  for (let i = 1; i <= r.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= h.length; j++) cur.push(Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (r[i - 1] !== h[j - 1] ? 1 : 0)));
+    prev = cur;
+  }
+  return [prev[h.length], r.length];
+}
+
+document.getElementById('run').onclick = async () => {
+  out.textContent = '';
+  const label = await modelLabel();
+  const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  log(`model: ${label} | ua: ${navigator.userAgent.split(' ').slice(-2).join(' ')} | cores: ${navigator.hardwareConcurrency}`);
+  log('loading model (first run downloads it)...');
+  const model = await Vosk.createModel('/model.tar.gz');
+  const rows = [];
+  for (const [id, file, ref] of FILES) {
+    const pcm = await decodeWav(ctx, await (await fetch(file)).arrayBuffer());
+    const audioMs = (1000 * pcm.length) / 16000;
+    const e2es = [], fs = [];
+    let hyp = '';
+    for (let k = 0; k < REPS; k++) {
+      const t0 = performance.now();
+      const r = await decodeOnce(model, ctx, pcm);
+      e2es.push(performance.now() - t0);
+      fs.push(r.frameP95);
+      hyp = r.text;
+    }
+    const [e, n] = wer(ref, hyp);
+    const e2e = med(e2es);
+    rows.push({ id, ref, hyp, e2eMs: Math.round(e2e), e2eP95: Math.round(p95(e2es)), audioMs: Math.round(audioMs), rtf: +(e2e / audioMs).toFixed(2), frameP95: +Math.max(...fs).toFixed(2), wer: `${e}/${n}` });
+    log(`${id}: e2e med ${Math.round(e2e)}ms p95 ${Math.round(p95(e2es))}ms audio ${Math.round(audioMs)}ms rtf ${(e2e / audioMs).toFixed(2)} frameP95 ${Math.max(...fs).toFixed(2)}ms wer ${e}/${n} hyp=${JSON.stringify(hyp)}`);
+  }
+  const all = rows.map((r) => r.e2eMs);
+  log(`---\nmedian e2e ${med(all)}ms p95 ${p95(all)}ms`);
+  window.__benchReport = JSON.stringify({ model: label, ua: navigator.userAgent, cores: navigator.hardwareConcurrency, rows }, null, 1);
+  document.getElementById('copy').disabled = false;
+};
+document.getElementById('copy').onclick = async () => {
+  await navigator.clipboard.writeText(window.__benchReport || '');
+  log('(report copied)');
+};
+</script>
+</body>

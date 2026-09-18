@@ -135,12 +135,23 @@ patient generator), `cases.js` (38 TCs), `acoustic-eval/` (TTS harness).
 
 ## Baselines (Sep 2026 laptop hardware — re-run, don't trust blindly)
 
-- `pnpm cases`: 31/38 pass, 0 fail, 7 skip (fan-out, stats/classification/
+- `pnpm cases`: 33 pass, 0 fail, 7 skip (fan-out, stats/classification/
   sessions, Miller-note — documented in-file).
 - `pnpm eval` (synthetic, 10×32): depth ~99.8%, bleed ~93% (residual is
   mostly the generator's silent rates), rec ~95%, status 100%.
-- `pnpm acoustic`: fixture TTS underestimates live onsets unless padded;
-  small-en-us WER ≈ 10, lgraph-0.22 ≈ 7.8 (published); trial model is lgraph.
+- `pnpm acoustic` (TTS fixtures, same grammar, native libvosk — browser WASM
+  runs ~1.5-2x slower; TTS ≠ real speech, white-noise profiles are crude):
+  | model | WER clean/harsh | digits clean/harsh | decode med/p95 | RTF |
+  |---|---|---|---|---|
+  | small-en-us (41MB) | 24%/37% | 14%/32% | 11/16ms | 0.01 |
+  | lgraph-0.22 (130MB) | 17%/46% | 14%/53% | 57/80ms | 0.03 |
+  lgraph wins clean audio, loses under synthetic noise, and decodes ~5x
+  slower — on office-class hardware that ratio threatens the 300ms budget.
+  Verdict pending live trial.
+- In-page bench: open `/bench.html` on any machine (5 fixtures × 5 reps,
+  model auto-labeled by download size, copy-pasteable report) — the way to
+  measure office PCs with zero installs. `run.py --model-dir PATH` selects
+  the offline model.
 
 ## Git
 
