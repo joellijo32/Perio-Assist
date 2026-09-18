@@ -1,9 +1,9 @@
 node_modules/
 dist/
 __pycache__/
-public/model*.tar.gz
-scripts/acoustic-eval/.venv/
-scripts/acoustic-eval/models/
-scripts/acoustic-eval/fixtures/
-scripts/acoustic-eval/results.json
-scripts/acoustic-eval/samples/
+**/public/model*.tar.gz
+**/scripts/acoustic-eval/.venv/
+**/scripts/acoustic-eval/models/
+**/scripts/acoustic-eval/fixtures/
+**/scripts/acoustic-eval/results.json
+**/scripts/acoustic-eval/samples/
