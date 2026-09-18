@@ -24,8 +24,23 @@ MODEL_DIR = os.path.join(BASE, 'models', 'active')
 
 
 def ensure_model():
-    # ponytail: one model source (setup.sh) - extract on first run, harness never ships models
-    if os.path.isdir(MODEL_DIR) and os.listdir(MODEL_DIR):
+    # ponytail: one model source (setup.sh) - extract on first run, harness never ships models.
+    # stamp tracks the tarball so a model swap can't silently benchmark stale files.
+    stamp = os.path.join(BASE, 'models', '.active-src')
+    try:
+        cur = f'{os.path.getmtime(MODEL_TAR)}:{os.path.getsize(MODEL_TAR)}'
+    except OSError:
+        cur = None
+    try:
+        prev = open(stamp).read().strip() if os.path.exists(stamp) else None
+    except OSError:
+        prev = None
+    if (
+        cur is not None
+        and prev == cur
+        and os.path.isdir(MODEL_DIR)
+        and os.listdir(MODEL_DIR)
+    ):
         return MODEL_DIR
     if not os.path.exists(MODEL_TAR):
         print('missing public/model.tar.gz - run ./scripts/setup.sh first')
@@ -33,7 +48,12 @@ def ensure_model():
     with tarfile.open(MODEL_TAR) as t:
         top = t.getnames()[0].split('/')[0]
         t.extractall(os.path.join(BASE, 'models'))
+    import shutil
+
+    shutil.rmtree(MODEL_DIR, ignore_errors=True)
     os.rename(os.path.join(BASE, 'models', top), MODEL_DIR)
+    with open(stamp, 'w') as f:
+        f.write(cur)
     return MODEL_DIR
 PROFILES = {
     'clean': None,
