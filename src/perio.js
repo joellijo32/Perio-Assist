@@ -612,8 +612,9 @@ export function parseInto(state, text) {
       } else i = k - 1;
       continue;
     }
-    if (w === 'all') {
-      // ponytail: bulk status ("all wisdom teeth missing") - no status word, no consume
+    if (w === 'all' || w === 'are') {
+      // ponytail: "are" doubles as "all" ONLY before a scope ("are wisdom teeth missing") -
+      // elsewhere it is list grammar ("17 and 32 are missing"), so a global alias would corrupt it
       let j = skipFiller(toks, i + 1);
       let ids = null;
       if (toks[j] === 'teeth') {

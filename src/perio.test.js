@@ -236,6 +236,12 @@ assert.equal(g.absent[5] ?? null, null, 'bulk undo clears all');
 assert.equal(g.absent[6] ?? null, null, 'bulk undo clears all (2)');
 parseInto(g, 'tooth 30 pus at mid-buccal');
 assert.equal(g.sup[30][1], true, 'pus alias');
+// "are" is scope ("are wisdom teeth...") only before a scope; elsewhere it stays list grammar
+parseInto(g, 'are wisdom teeth present');
+assert.equal(g.absent[1] ?? null, null, 'are-as-all clears');
+const h = createState();
+parseInto(h, 'teeth 17, 18 and 32 are missing');
+assert.deepEqual([h.absent[17], h.absent[18], h.absent[32]], ['MISSING', 'MISSING', 'MISSING'], 'are-as-terminator');
 // plaque mirrors bleeding scope-for-scope
 const p = createState();
 parseInto(p, 'tooth 8 buccal 2-2-2 plaque on buccal');
