@@ -247,4 +247,15 @@ parseInto(p, 'tooth 10 no plaque');
 assert.equal(p.plaque[10].every((b) => !b), true, 'negated plaque');
 parseInto(p, 'undo');
 assert.equal(p.plaque[9][0], false, 'plaque undo');
+// signed GM: negatives store, margin phrasing, undo round-trips
+const m = createState();
+parseInto(m, 'tooth 24 gingival overgrowth 2mm at all buccal sites');
+assert.deepEqual(m.rec[24].slice(0, 3), [-2, -2, -2], 'negative GM row');
+assert.deepEqual(m.teeth[24].slice(0, 3), [null, null, null], 'no depth pollution');
+parseInto(m, 'tooth 8 margin minus 2 at mid-buccal');
+assert.equal(m.rec[8][1], -2, 'margin minus');
+parseInto(m, 'tooth 9 gm 3');
+assert.equal(m.rec[9][0], 3, 'gm bare');
+parseInto(m, 'undo');
+assert.equal(m.rec[9][0], 0, 'undo GM');
 console.log('perio.test ok');

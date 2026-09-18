@@ -219,7 +219,7 @@ function patchDepth(state, t, s, v) {
   return true;
 }
 
-const FILLER = new Set(['is', 'a', 'the', 'that', 'with', 'wait', 'positive', 'please', 'are']);
+const FILLER = new Set(['is', 'a', 'the', 'that', 'with', 'wait', 'positive', 'please', 'are', 'of']);
 const NEG_SET = new Set(['bleeding', 'bleed', 'blood', 'bop', 'drop', 'mobility', 'suppuration', 'plaque', 'pi']);
 
 function skipFiller(toks, j) {
@@ -262,6 +262,20 @@ export function parseInto(state, text) {
       advance(state);
     }
     nums = [];
+  };
+  // ponytail: one scope resolver for all GM phrasings - row, all, site, or previous touch
+  const gmScope = (j) => {
+    let k = j;
+    while (FILLER.has(toks[k]) || SITE_FILLER.has(toks[k])) k++;
+    if (ALLWORDS.has(toks[k])) {
+      const k2 = skipFiller(toks, k + 1);
+      if (toks[k2] in ROWS) return { sites: [...ROWS[toks[k2]]], last: k2 };
+      return { sites: [0, 1, 2, 3, 4, 5], last: k };
+    }
+    if (toks[k] in ROWS) return { sites: [...ROWS[toks[k]]], last: k };
+    const site = toSite(toks, k, state.aspect);
+    if (site) return { sites: [site[0]], last: site[1] - 1 };
+    return { sites: [recTarget(state)], last: k - 1 };
   };
   for (let i = 0; i < toks.length; i++) {
     const w = toks[i];
@@ -404,25 +418,42 @@ export function parseInto(state, text) {
       if (v == null || v > 12) continue;
       j++;
       if (toks[j] === 'millimeter' || toks[j] === 'millimeters') j++;
-      j = skipFiller(toks, j);
-      if (toks[j] in ROWS) {
-        for (const s of ROWS[toks[j]]) storeRec(state, t, s, v);
-        i = j;
-      } else {
-        const site = toSite(toks, j, state.aspect);
-        const s = site ? site[0] : recTarget(state);
-        storeRec(state, t, s, v);
-        i = (site ? site[1] : j) - 1;
-      }
+      const sc = gmScope(j);
+      for (const s of sc.sites) storeRec(state, t, s, v);
+      i = sc.last;
+      continue;
+    }
+    if (w === 'margin' || w === 'gm') {
+      // ponytail: signed GM in one branch ("margin 2", "margin minus 3", "GM plus two")
+      const hadPending = nums.length > 0;
+      flush();
+      const t = condTooth(state, hadPending);
+      let j = skipFiller(toks, i + 1);
+      let sign = 1;
+      if (toks[j] === 'minus' || toks[j] === 'negative') { sign = -1; j = skipFiller(toks, j + 1); }
+      else if (toks[j] === 'plus') { j = skipFiller(toks, j + 1); }
+      const v = toNum(toks[j]);
+      if (v == null || v > 12) continue;
+      j++;
+      if (toks[j] === 'millimeter' || toks[j] === 'millimeters') j++;
+      const sc = gmScope(j);
+      for (const s of sc.sites) storeRec(state, t, s, sign * v);
+      i = sc.last;
       continue;
     }
     if (w === 'overgrowth' || w === 'hyperplasia') {
-      // ponytail: negative GM needs signed margins + CAL - consume quietly, say so once
+      // ponytail: hyperplasia is negative GM - same targeting as recession, negated
+      const hadPending = nums.length > 0;
+      flush();
+      const t = condTooth(state, hadPending);
       let j = skipFiller(toks, i + 1);
-      if (toNum(toks[j]) != null) j++;
+      const v = toNum(toks[j]);
+      if (v == null || v > 12) { hint ??= 'overgrowth amount not heard'; continue; }
+      j++;
       if (toks[j] === 'millimeter' || toks[j] === 'millimeters') j++;
-      i = j - 1;
-      hint ??= 'gingival overgrowth noted but GM is not charted yet';
+      const sc = gmScope(j);
+      for (const s of sc.sites) storeRec(state, t, s, -v);
+      i = sc.last;
       continue;
     }
     if (w === 'class') {

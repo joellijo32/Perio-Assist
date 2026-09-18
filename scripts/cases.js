@@ -87,7 +87,10 @@ T('TC-012', 'Tooth 6, buccal 3-3-3, lingual 2-2-2, recession 3mm buccal, bleedin
   eq(s.bleed[6].slice(0, 3), [true, true, true], 'bop buccal');
   eq(s.teeth[6].slice(0, 3), [3, 3, 3], 'no miller pollution');
 });
-SKIP('TC-013', 'negative GM (hyperplasia) needs signed margins + CAL - out of scope');
+T('TC-013', 'Tooth 24, buccal 5-5-5, lingual 4-4-4, gingival overgrowth 2mm at all buccal sites, no bleeding.', (s) => {
+  eq(s.teeth[24].slice(0, 3), [5, 5, 5], 'pd kept');
+  eq(s.rec[24].slice(0, 3), [-2, -2, -2], 'negative GM row (CAL 5-2=3)');
+});
 
 // --- 6. Mobility ---
 T('TC-014', '"no mobility"->0; "mobility one"->1; "mobility two"->2; "mobility three"->3', (s) => {
