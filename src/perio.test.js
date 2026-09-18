@@ -222,4 +222,59 @@ assert.equal(f.sup[6][1], true, 'real suppuration intact');
 // observed live mishearing: "furcation" -> "vocation" (verified on user recording, both models)
 parseInto(f, 'tooth 5 vocation class three on lingual');
 assert.deepEqual(f.fur[5], { grade: 3, side: 'lingual' }, 'vocation alias');
+// bulk status + present + pus alias
+const g = createState();
+parseInto(g, 'all wisdom teeth missing');
+assert.deepEqual([g.absent[1], g.absent[16], g.absent[17], g.absent[32]], ['MISSING', 'MISSING', 'MISSING', 'MISSING'], 'wisdom bulk');
+assert.equal(g.absent[2] ?? null, null, 'neighbors untouched');
+parseInto(g, 'tooth 16 is present');
+assert.equal(g.absent[16] ?? null, null, 'present clears');
+parseInto(g, 'all upper teeth missing');
+assert.equal(g.absent[5], 'MISSING', 'upper bulk');
+parseInto(g, 'undo');
+assert.equal(g.absent[5] ?? null, null, 'bulk undo clears all');
+assert.equal(g.absent[6] ?? null, null, 'bulk undo clears all (2)');
+parseInto(g, 'tooth 30 pus at mid-buccal');
+assert.equal(g.sup[30][1], true, 'pus alias');
+// "are" is scope ("are wisdom teeth...") only before a scope; elsewhere it stays list grammar
+parseInto(g, 'are wisdom teeth present');
+assert.equal(g.absent[1] ?? null, null, 'are-as-all clears');
+const h = createState();
+parseInto(h, 'teeth 17, 18 and 32 are missing');
+assert.deepEqual([h.absent[17], h.absent[18], h.absent[32]], ['MISSING', 'MISSING', 'MISSING'], 'are-as-terminator');
+// plaque mirrors bleeding scope-for-scope
+const p = createState();
+parseInto(p, 'tooth 8 buccal 2-2-2 plaque on buccal');
+assert.deepEqual(p.plaque[8].slice(0, 3), [true, true, true], 'plaque row');
+assert.equal(p.bleed[8].every((b) => !b), true, 'bleed untouched');
+parseInto(p, 'tooth 9 plaque MB');
+assert.equal(p.plaque[9][0], true, 'plaque site');
+parseInto(p, 'tooth 10 no plaque');
+assert.equal(p.plaque[10].every((b) => !b), true, 'negated plaque');
+parseInto(p, 'undo');
+assert.equal(p.plaque[9][0], false, 'plaque undo');
+// signed GM: negatives store, margin phrasing, undo round-trips
+const m = createState();
+parseInto(m, 'tooth 24 gingival overgrowth 2mm at all buccal sites');
+assert.deepEqual(m.rec[24].slice(0, 3), [-2, -2, -2], 'negative GM row');
+assert.deepEqual(m.teeth[24].slice(0, 3), [null, null, null], 'no depth pollution');
+parseInto(m, 'tooth 8 margin minus 2 at mid-buccal');
+assert.equal(m.rec[8][1], -2, 'margin minus');
+parseInto(m, 'tooth 9 gm 3');
+assert.equal(m.rec[9][0], 3, 'gm bare');
+parseInto(m, 'undo');
+assert.equal(m.rec[9][0], 0, 'undo GM');
+// result signals for chimes: insert / undo / puzzled / nav-silent
+const q = createState();
+const ins = parseInto(q, '3 2 3');
+assert.equal(ins.added > 0 && !ins.undone && ins.hint == null, true, 'insert signal');
+const nav = parseInto(q, 'jump 12');
+assert.equal(nav.added === 0 && !nav.stored && !nav.undone && nav.hint == null, true, 'nav silent');
+const puz = parseInto(q, 'hello world');
+assert.equal(puz.added === 0 && !puz.stored && !puz.undone && puz.hint != null, true, 'puzzled signal');
+parseInto(q, '4 5 6');
+const un = parseInto(q, 'undo');
+assert.equal(un.undone, true, 'undo signal');
+const clr = parseInto(createState(), 'clear');
+assert.equal(clr.undone, false, 'no-op clear is not undo');
 console.log('perio.test ok');

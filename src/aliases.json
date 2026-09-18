@@ -1,0 +1,4 @@
+{
+  "how to use": "Map a misheard word to the word you meant, one per line. Words here must also exist in grammar.json or Vosk will never emit them. Takes effect on rebuild/restart. No code changes needed. Do NOT alias syntax words (are/is/to/and) - they carry sentence structure; report those cases instead.",
+  "vocation": "furcation"
+}

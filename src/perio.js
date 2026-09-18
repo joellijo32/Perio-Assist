@@ -1,4 +1,6 @@
 // ponytail: pure framework-free chart logic - testable in node, wrapped with $state in chart.svelte.js
+// user-editable mishearing map (aliases.json) applied at tokenize time - no code changes for new confusions
+import ALIASES from './aliases.json' with { type: 'json' };
 export const NUMWORDS = {
   zero: 0, one: 1, won: 1, two: 2, to: 2, too: 2, three: 3, tree: 3,
   four: 4, for: 4, fore: 4, five: 5, six: 6, seven: 7, ate: 8, eight: 8,
@@ -96,6 +98,26 @@ function quadToothToUni(quad, ord, type) {
   return base + dir * idx;
 }
 
+// ponytail: one status writer - present clears, the rest mark; undo restores via prev
+function markAbsent(state, ids, word) {
+  for (const t of ids) {
+    if (word === 'present') {
+      if (state.absent[t] == null) continue;
+      state.hist.push({ t, s: 0, kind: 'absent', prev: state.absent[t] });
+      delete state.absent[t];
+    } else {
+      state.hist.push({ t, s: 0, kind: 'absent', prev: state.absent[t] ?? null });
+      state.absent[t] = word.toUpperCase();
+    }
+  }
+}
+
+const TOOTH_GROUPS = {
+  wisdom: [1, 16, 17, 32],
+  upper: Array.from({ length: 16 }, (_, i) => i + 1),
+  lower: Array.from({ length: 16 }, (_, i) => i + 17),
+};
+
 // ponytail: one tooth resolver for jump + announcements - composites included
 function resolveTooth(toks, i) {
   let j = i;
@@ -115,6 +137,7 @@ export function createState() {
     bleed: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(false)])),
     rec: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(0)])),
     sup: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(false)])),
+    plaque: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(false)])),
     mob: {},
     fur: {},    // ponytail: tooth map, NOT the UI message - store.status is a string, indexing it marches 1->32
     absent: {},
@@ -160,6 +183,7 @@ function restore(state, h, moveCursor = true) {
   if (h.kind === 'bleed') state.bleed[h.t][h.s] = false;
   else if (h.kind === 'rec') state.rec[h.t][h.s] = h.prev ?? 0;
   else if (h.kind === 'sup') state.sup[h.t][h.s] = false;
+  else if (h.kind === 'plaque') state.plaque[h.t][h.s] = false;
   else if (h.kind === 'absent') {
     if (h.prev == null) delete state.absent[h.t];
     else state.absent[h.t] = h.prev;
@@ -195,11 +219,8 @@ function patchDepth(state, t, s, v) {
   return true;
 }
 
-const FILLER = new Set(['is', 'a', 'the', 'that', 'with', 'wait', 'positive', 'please', 'are']);
-
-// ponytail: observed mishearing - "[unk]" under grammar, "vocation" open-vocab (v/f onset + -cation tail)
-const isFurc = (w) => w === 'furcation' || w === 'vocation';
-const NEG_SET = new Set(['bleeding', 'bleed', 'blood', 'bop', 'drop', 'mobility', 'suppuration']);
+const FILLER = new Set(['is', 'a', 'the', 'that', 'with', 'wait', 'positive', 'please', 'are', 'of']);
+const NEG_SET = new Set(['bleeding', 'bleed', 'blood', 'bop', 'drop', 'mobility', 'suppuration', 'plaque', 'pi']);
 
 function skipFiller(toks, j) {
   while (FILLER.has(toks[j])) j++;
@@ -224,12 +245,14 @@ export function parseInto(state, text) {
     .replace(/(\d+)mm\b/g, '$1 millimeter ')
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((t) => ALIASES[t] ?? t);
   if (!toks.length) return { ms: performance.now() - t0, hint: 'empty input' };
   const cur0 = `${state.cur.t}:${state.cur.s}`;
   const ctx0 = `${state.aspect}${state.aspectSet}${Object.keys(state.absent).length}`;
   let negated = false;
   let stored = false; // mob/fur writes leave no hist trace
+  let undone = false; // clear/scratch/undo popped at least one entry
   let nums = [];
   const flush = () => {
     if (!nums.length) return;
@@ -240,6 +263,20 @@ export function parseInto(state, text) {
       advance(state);
     }
     nums = [];
+  };
+  // ponytail: one scope resolver for all GM phrasings - row, all, site, or previous touch
+  const gmScope = (j) => {
+    let k = j;
+    while (FILLER.has(toks[k]) || SITE_FILLER.has(toks[k])) k++;
+    if (ALLWORDS.has(toks[k])) {
+      const k2 = skipFiller(toks, k + 1);
+      if (toks[k2] in ROWS) return { sites: [...ROWS[toks[k2]]], last: k2 };
+      return { sites: [0, 1, 2, 3, 4, 5], last: k };
+    }
+    if (toks[k] in ROWS) return { sites: [...ROWS[toks[k]]], last: k };
+    const site = toSite(toks, k, state.aspect);
+    if (site) return { sites: [site[0]], last: site[1] - 1 };
+    return { sites: [recTarget(state)], last: k - 1 };
   };
   for (let i = 0; i < toks.length; i++) {
     const w = toks[i];
@@ -382,25 +419,42 @@ export function parseInto(state, text) {
       if (v == null || v > 12) continue;
       j++;
       if (toks[j] === 'millimeter' || toks[j] === 'millimeters') j++;
-      j = skipFiller(toks, j);
-      if (toks[j] in ROWS) {
-        for (const s of ROWS[toks[j]]) storeRec(state, t, s, v);
-        i = j;
-      } else {
-        const site = toSite(toks, j, state.aspect);
-        const s = site ? site[0] : recTarget(state);
-        storeRec(state, t, s, v);
-        i = (site ? site[1] : j) - 1;
-      }
+      const sc = gmScope(j);
+      for (const s of sc.sites) storeRec(state, t, s, v);
+      i = sc.last;
+      continue;
+    }
+    if (w === 'margin' || w === 'gm') {
+      // ponytail: signed GM in one branch ("margin 2", "margin minus 3", "GM plus two")
+      const hadPending = nums.length > 0;
+      flush();
+      const t = condTooth(state, hadPending);
+      let j = skipFiller(toks, i + 1);
+      let sign = 1;
+      if (toks[j] === 'minus' || toks[j] === 'negative') { sign = -1; j = skipFiller(toks, j + 1); }
+      else if (toks[j] === 'plus') { j = skipFiller(toks, j + 1); }
+      const v = toNum(toks[j]);
+      if (v == null || v > 12) continue;
+      j++;
+      if (toks[j] === 'millimeter' || toks[j] === 'millimeters') j++;
+      const sc = gmScope(j);
+      for (const s of sc.sites) storeRec(state, t, s, sign * v);
+      i = sc.last;
       continue;
     }
     if (w === 'overgrowth' || w === 'hyperplasia') {
-      // ponytail: negative GM needs signed margins + CAL - consume quietly, say so once
+      // ponytail: hyperplasia is negative GM - same targeting as recession, negated
+      const hadPending = nums.length > 0;
+      flush();
+      const t = condTooth(state, hadPending);
       let j = skipFiller(toks, i + 1);
-      if (toNum(toks[j]) != null) j++;
+      const v = toNum(toks[j]);
+      if (v == null || v > 12) { hint ??= 'overgrowth amount not heard'; continue; }
+      j++;
       if (toks[j] === 'millimeter' || toks[j] === 'millimeters') j++;
-      i = j - 1;
-      hint ??= 'gingival overgrowth noted but GM is not charted yet';
+      const sc = gmScope(j);
+      for (const s of sc.sites) storeRec(state, t, s, -v);
+      i = sc.last;
       continue;
     }
     if (w === 'class') {
@@ -411,7 +465,7 @@ export function parseInto(state, text) {
       const v = toNum(toks[j]);
       if (v == null) continue;
       const fwd = toks.slice(j + 1, j + 4);
-      const fi = fwd.findIndex(isFurc);
+      const fi = fwd.indexOf('furcation');
       if (fi >= 0) {
         let k = j + 1 + fi + 1;
         k = skipFiller(toks, k);
@@ -428,7 +482,7 @@ export function parseInto(state, text) {
       i = j;
       continue;
     }
-    if (isFurc(w)) {
+    if (w === 'furcation') {
       const hadPending = nums.length > 0;
       flush(); // "furcation class one on buccal" (or "vocation ...")
       const t = condTooth(state, hadPending);
@@ -457,7 +511,7 @@ export function parseInto(state, text) {
       } else hint ??= 'mobility mentioned but no grade heard';
       continue;
     }
-    if (w === 'suppuration') {
+    if (w === 'suppuration' || w === 'pus') {
       const hadPending = nums.length > 0;
       flush();
       const t = condTooth(state, hadPending);
@@ -542,7 +596,7 @@ export function parseInto(state, text) {
           break;
         }
         const tk = skipFiller(toks, kk);
-        if (tmp.length && ['missing', 'implant', 'mobility', 'are', 'is'].includes(toks[tk])) {
+        if (tmp.length && ['missing', 'implant', 'present', 'mobility', 'are', 'is'].includes(toks[tk])) {
           listed.push(...tmp);
           k = kk;
         }
@@ -552,15 +606,35 @@ export function parseInto(state, text) {
       state.aspect = 'facial';
       state.aspectSet = false;
       k = skipFiller(toks, k); // "tooth 5 is missing" / "are missing"
-      if (toks[k] === 'missing' || toks[k] === 'implant') {
-        for (const t of listed) {
-          state.hist.push({ t, s: 0, kind: 'absent', prev: state.absent[t] ?? null });
-          state.absent[t] = toks[k].toUpperCase();
-        }
+      if (toks[k] === 'missing' || toks[k] === 'implant' || toks[k] === 'present') {
+        markAbsent(state, listed, toks[k]);
         i = k;
         // ponytail: land, don't skip - implants carry charting; sequential flow skips via advance/next
       } else i = k - 1;
       continue;
+    }
+    if (w === 'all' || w === 'are') {
+      // ponytail: "are" doubles as "all" ONLY before a scope ("are wisdom teeth missing") -
+      // elsewhere it is list grammar ("17 and 32 are missing"), so a global alias would corrupt it
+      let j = skipFiller(toks, i + 1);
+      let ids = null;
+      if (toks[j] === 'teeth') {
+        ids = TOOTH_GROUPS.upper.concat(TOOTH_GROUPS.lower);
+        j++;
+      } else if (toks[j] in TOOTH_GROUPS && toks[j + 1] === 'teeth') {
+        ids = TOOTH_GROUPS[toks[j]];
+        j += 2;
+      }
+      if (ids) {
+        const k = skipFiller(toks, j);
+        if (toks[k] === 'missing' || toks[k] === 'implant' || toks[k] === 'present') {
+          flush();
+          markAbsent(state, ids, toks[k]);
+          i = k;
+          continue;
+        }
+      }
+      continue; // bare "all" ("all buccal 2-2-2") - nothing to do, rest flows normally
     }
     if (w === 'missing' || w === 'implant') {
       flush();
@@ -651,10 +725,51 @@ export function parseInto(state, text) {
       }
       continue;
     }
+    if (w === 'plaque' || w === 'pi') {
+      // ponytail: mirrors bleeding scope-for-scope - shared helper would couple two working branches
+      const hadPending = nums.length > 0;
+      flush();
+      const t = condTooth(state, hadPending);
+      let j = i + 1;
+      while (SITE_FILLER.has(toks[j])) j++;
+      const pflag = (s) => {
+        state.plaque[t][s] = true;
+        state.hist.push({ t, s, kind: 'plaque' });
+      };
+      if (ALLWORDS.has(toks[j])) {
+        for (let s = 0; s < 6; s++) pflag(s);
+        i = j;
+        continue;
+      }
+      if (toks[j] === 'buccal' || ((toks[j] === 'facial' || toks[j] === 'lingual') && t !== state.cur.t)) {
+        for (const s of ROWS[toks[j]]) pflag(s);
+        for (;;) {
+          const kk = skipFiller(toks, j + 1);
+          if (toks[kk] !== 'and') break;
+          const k2 = skipFiller(toks, kk + 1);
+          if (!(toks[k2] in ROWS)) break;
+          for (const s of ROWS[toks[k2]]) pflag(s);
+          j = k2;
+        }
+        i = j;
+        continue;
+      }
+      if (toks[i - 1] === 'some' || toks[i - 1] === 'any') hint ??= 'plaque site unspecified - verify';
+      const psite = toSite(toks, i + 1, state.aspect);
+      if (psite) {
+        pflag(psite[0]);
+        i = psite[1] - 1;
+      } else {
+        pflag(Math.max(0, state.cur.s - 1));
+      }
+      continue;
+    }
     if (w === 'clear' || w === 'scratch') {
       flush();
       const own = state.hist.length > mark;
-      restore(state, state.hist.pop());
+      const h = state.hist.pop();
+      if (h) undone = true;
+      restore(state, h);
       state.overflowed = false;
       if (!own) shrinkGroup(state);
       continue;
@@ -670,7 +785,7 @@ export function parseInto(state, text) {
         earliest = h;
         restore(state, h, false);
       }
-      if (earliest) { state.cur = { t: earliest.t, s: earliest.s }; state.overflowed = false; }
+      if (earliest) { undone = true; state.cur = { t: earliest.t, s: earliest.s }; state.overflowed = false; }
       continue;
     }
   }
@@ -687,5 +802,5 @@ export function parseInto(state, text) {
   ) {
     hint ??= 'no clinical data found';
   }
-  return { ms: performance.now() - t0, hint };
+  return { ms: performance.now() - t0, hint, added, stored, undone };
 }

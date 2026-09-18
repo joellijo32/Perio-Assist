@@ -1,4 +1,5 @@
 import { createState, parseInto, SITENAMES } from './perio.js';
+import { buildReport, downloadJson, reportFilename } from './export.js';
 
 export { SITENAMES };
 
@@ -7,7 +8,7 @@ export { SITENAMES };
 export const store = $state({
   ...createState(),
   transcript: [],
-  status: 'Idle. Pick an engine and press Start.',
+  status: 'Idle. Click here or press Space to start.',
   latencyMs: null,
   listening: false,
 });
@@ -17,6 +18,21 @@ export const store = $state({
 export const preview = $state({ teeth: null, bleed: null, cur: null });
 
 let nextId = 1;
+
+// ponytail: live-chart export only - saved-patient lookup lives on feature/client-db, not here
+const EXPORT_KEYS = ['teeth', 'bleed', 'rec', 'sup', 'plaque', 'mob', 'fur', 'absent'];
+
+export function exportActiveJson(liveName = '') {
+  const chart = JSON.parse(JSON.stringify(Object.fromEntries(EXPORT_KEYS.map((k) => [k, store[k]]))));
+  const done = Object.values(chart.teeth).filter((s) => s.some((v) => v !== null)).length;
+  if (!done) { store.status = 'Nothing to export — chart first.'; return null; }
+  const name = liveName.trim() || 'unsaved';
+  const report = buildReport({ name, chart, id: null, updatedAt: null });
+  const file = reportFilename(name);
+  downloadJson(report, file);
+  store.status = `Exported ${file}.`;
+  return report;
+}
 
 export function say(text, final) {
   store.transcript.unshift({ id: nextId++, text, final });
@@ -46,6 +62,7 @@ export function commit(text) {
   const r = parseInto(store, text);
   store.latencyMs = r.ms;
   if (r.hint) store.status = r.hint;
+  return r;
 }
 
 // ponytail: click navigation mirrors the parser's explicit navs (cursor + aspect, no stale overflow)
@@ -65,9 +82,10 @@ export function resetAll() {  const fresh = createState();
   store.hist = fresh.hist;
   store.groups = fresh.groups;
   store.absent = fresh.absent;
-  store.status = 'Idle. Pick an engine and press Start.';
+  store.status = 'Idle. Click here or press Space to start.';
   store.rec = fresh.rec;
   store.sup = fresh.sup;
+  store.plaque = fresh.plaque;
   store.mob = fresh.mob;
   store.fur = fresh.fur;
   store.aspect = fresh.aspect;
