@@ -865,6 +865,7 @@ export function parseInto(state, text) {
   flush();
   const added = state.hist.length - mark;
   if (added > 0) state.groups.push(added);
+  const kinds = [...new Set(state.hist.slice(mark).map((h) => h.kind))];
   // ponytail: non-empty input that changed nothing is either navigation (cur moved) or prose
   if (
     added <= 0 &&
@@ -875,5 +876,5 @@ export function parseInto(state, text) {
   ) {
     hint ??= 'no clinical data found';
   }
-  return { ms: performance.now() - t0, hint, added, stored, undone, stop };
+  return { ms: performance.now() - t0, hint, added, stored, undone, stop, kinds };
 }

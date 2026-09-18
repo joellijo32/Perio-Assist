@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import { commit, exportActiveJson, previewPartial, resetAll, say, SITENAMES, store } from './chart.svelte.js';
   import { createRecognizer } from './recognizer.js';
+  import { feedbackText } from './feedback.js';
   import PerioChart from './PerioChart.svelte';
 
   let engine = $state('vosk');
@@ -77,17 +78,61 @@
       else if (kind === 'puzzled') { tone(220, 0, 0.16); tone(196, 0.16, 0.24); }
     } catch { /* audio unavailable - status text still updates */ }
   }
-  function commitAndChime(text) {
+  function commitAndChime(text, voice = false) {
     const r = commit(text);
     if (r.stop && store.listening) { toggle(); return; } // voice "stop" - toggle chimes itself
-    if (r.undone) chime('undo');
-    else if (r.added > 0 || r.stored) chime('insert');
+    let beep = 0;
+    if (r.undone) { chime('undo'); beep = 170; }
+    else if (r.added > 0 || r.stored) { chime('insert'); beep = 120; }
     else if (r.hint) chime('puzzled');
+    else return;
+    if (voice) speakFeedback(feedbackText(r), beep);
+  }
+
+  // ponytail: spoken summaries after the beep - teardown/rebuild around TTS, never mute flags
+  let speak = $state(true);
+  try {
+    if (localStorage.getItem('voice-perio.speak') === '0') speak = false;
+  } catch { /* private mode - defaults stand */ }
+
+  function setSpeak(v) {
+    speak = v;
+    try { localStorage.setItem('voice-perio.speak', v ? '1' : '0'); } catch { /* noop */ }
+  }
+
+  function speakFeedback(phrase, beepMs) {
+    if (!speak || !phrase) return;
+    try {
+      const synth = window.speechSynthesis;
+      // ponytail: one voice at a time - a busy synth means fast dictation; the chime already confirmed it
+      if (!synth || synth.speaking || synth.pending) return;
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(phrase.slice(0, 140));
+      u.rate = 1.15;
+      u.volume = 0.8;
+      let done = false;
+      const finish = () => {
+        if (done || !store.listening) return;
+        done = true;
+        recognizer.resume().then((ok) => {
+          if (!ok) store.listening = false;
+        });
+      };
+      u.onend = u.onerror = () => finish();
+      setTimeout(() => {
+        try {
+          recognizer.pause();
+          synth.speak(u);
+          const words = phrase.trim().split(/\s+/).length;
+          setTimeout(() => finish(), 1500 + words * 350); // ponytail: onend is flaky - time-boxed fallback
+        } catch { finish(); }
+      }, beepMs);
+    } catch { /* voice feedback unavailable - chimes still play */ }
   }
 
   const recognizer = createRecognizer({
     onPartial: (text) => { say(text, false); previewPartial(text); },
-    onFinal: (text) => commitAndChime(text),
+    onFinal: (text) => commitAndChime(text, true),
     onStatus: (text) => (store.status = text),
     onStop: (text) => {
       chime('stop');
@@ -169,6 +214,7 @@
           <button class="ghost" onclick={resetAll} disabled={store.listening}>Reset</button>
           <input class="name" bind:value={name} placeholder="Client name" />
           <button class="ghost" onclick={() => exportActiveJson(name)}>Export</button>
+          <label class="voicefb"><input type="checkbox" checked={speak} onchange={(e) => setSpeak(e.currentTarget.checked)} /> Voice feedback</label>
           <span class="cursor">Tooth {store.cur.t} · {SITENAMES[store.cur.s]} ({store.cur.s + 1}/6)</span>
         <div class="stats">
           <span><b>{teethDone}/32</b> teeth</span>
