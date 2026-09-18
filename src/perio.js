@@ -137,6 +137,7 @@ export function createState() {
     bleed: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(false)])),
     rec: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(0)])),
     sup: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(false)])),
+    plaque: Object.fromEntries(Array.from({ length: 32 }, (_, i) => [i + 1, Array(6).fill(false)])),
     mob: {},
     fur: {},    // ponytail: tooth map, NOT the UI message - store.status is a string, indexing it marches 1->32
     absent: {},
@@ -182,6 +183,7 @@ function restore(state, h, moveCursor = true) {
   if (h.kind === 'bleed') state.bleed[h.t][h.s] = false;
   else if (h.kind === 'rec') state.rec[h.t][h.s] = h.prev ?? 0;
   else if (h.kind === 'sup') state.sup[h.t][h.s] = false;
+  else if (h.kind === 'plaque') state.plaque[h.t][h.s] = false;
   else if (h.kind === 'absent') {
     if (h.prev == null) delete state.absent[h.t];
     else state.absent[h.t] = h.prev;
@@ -218,7 +220,7 @@ function patchDepth(state, t, s, v) {
 }
 
 const FILLER = new Set(['is', 'a', 'the', 'that', 'with', 'wait', 'positive', 'please', 'are']);
-const NEG_SET = new Set(['bleeding', 'bleed', 'blood', 'bop', 'drop', 'mobility', 'suppuration']);
+const NEG_SET = new Set(['bleeding', 'bleed', 'blood', 'bop', 'drop', 'mobility', 'suppuration', 'plaque', 'pi']);
 
 function skipFiller(toks, j) {
   while (FILLER.has(toks[j])) j++;
@@ -687,6 +689,45 @@ export function parseInto(state, text) {
         i = site[1] - 1;
       } else {
         flag(Math.max(0, state.cur.s - 1));
+      }
+      continue;
+    }
+    if (w === 'plaque' || w === 'pi') {
+      // ponytail: mirrors bleeding scope-for-scope - shared helper would couple two working branches
+      const hadPending = nums.length > 0;
+      flush();
+      const t = condTooth(state, hadPending);
+      let j = i + 1;
+      while (SITE_FILLER.has(toks[j])) j++;
+      const pflag = (s) => {
+        state.plaque[t][s] = true;
+        state.hist.push({ t, s, kind: 'plaque' });
+      };
+      if (ALLWORDS.has(toks[j])) {
+        for (let s = 0; s < 6; s++) pflag(s);
+        i = j;
+        continue;
+      }
+      if (toks[j] === 'buccal' || ((toks[j] === 'facial' || toks[j] === 'lingual') && t !== state.cur.t)) {
+        for (const s of ROWS[toks[j]]) pflag(s);
+        for (;;) {
+          const kk = skipFiller(toks, j + 1);
+          if (toks[kk] !== 'and') break;
+          const k2 = skipFiller(toks, kk + 1);
+          if (!(toks[k2] in ROWS)) break;
+          for (const s of ROWS[toks[k2]]) pflag(s);
+          j = k2;
+        }
+        i = j;
+        continue;
+      }
+      if (toks[i - 1] === 'some' || toks[i - 1] === 'any') hint ??= 'plaque site unspecified - verify';
+      const psite = toSite(toks, i + 1, state.aspect);
+      if (psite) {
+        pflag(psite[0]);
+        i = psite[1] - 1;
+      } else {
+        pflag(Math.max(0, state.cur.s - 1));
       }
       continue;
     }

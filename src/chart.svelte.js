@@ -68,6 +68,7 @@ export function resetAll() {  const fresh = createState();
   store.status = 'Idle. Pick an engine and press Start.';
   store.rec = fresh.rec;
   store.sup = fresh.sup;
+  store.plaque = fresh.plaque;
   store.mob = fresh.mob;
   store.fur = fresh.fur;
   store.aspect = fresh.aspect;

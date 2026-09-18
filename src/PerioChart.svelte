@@ -24,11 +24,12 @@
     class:flag={v != null && v >= 4}
     class:pre={diffVal || diffBleed}
     onclick={() => moveTo(t, s)}
-    title={`${t} ${SITENAMES[s]}${store.rec[t][s] ? `, rec ${store.rec[t][s]}` : ''}${store.sup[t][s] ? ', suppuration' : ''}`}
+    title={`${t} ${SITENAMES[s]}${store.rec[t][s] ? `, rec ${store.rec[t][s]}` : ''}${store.sup[t][s] ? ', suppuration' : ''}${store.plaque[t][s] ? ', plaque' : ''}`}
   >
     <span class="dots">
       {#if (diffBleed ? pb : store.bleed[t][s])}<i class="dot bop" class:faded={diffBleed && !store.bleed[t][s]}></i>{/if}
       {#if store.sup[t][s]}<i class="dot sup"></i>{/if}
+      {#if store.plaque[t][s]}<i class="dot pi"></i>{/if}
     </span>
     <span class:faded={diffVal}>{diffVal ? (pv ?? '·') : (v ?? '·')}</span>
   </button>
@@ -108,6 +109,7 @@
   .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
   .dot.bop { background: #c00; }
   .dot.sup { background: #e6a800; }
+  .dot.pi { background: #1976d2; }
   .gm, .cal, .mob { text-align: center; font-size: 12px; padding: 1px 0; border: 1px solid #f0f0f0; }
   .cal { color: #666; font-style: italic; }
   .cal.flag { color: #c00; font-style: normal; font-weight: bold; }

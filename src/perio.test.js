@@ -236,4 +236,15 @@ assert.equal(g.absent[5] ?? null, null, 'bulk undo clears all');
 assert.equal(g.absent[6] ?? null, null, 'bulk undo clears all (2)');
 parseInto(g, 'tooth 30 pus at mid-buccal');
 assert.equal(g.sup[30][1], true, 'pus alias');
+// plaque mirrors bleeding scope-for-scope
+const p = createState();
+parseInto(p, 'tooth 8 buccal 2-2-2 plaque on buccal');
+assert.deepEqual(p.plaque[8].slice(0, 3), [true, true, true], 'plaque row');
+assert.equal(p.bleed[8].every((b) => !b), true, 'bleed untouched');
+parseInto(p, 'tooth 9 plaque MB');
+assert.equal(p.plaque[9][0], true, 'plaque site');
+parseInto(p, 'tooth 10 no plaque');
+assert.equal(p.plaque[10].every((b) => !b), true, 'negated plaque');
+parseInto(p, 'undo');
+assert.equal(p.plaque[9][0], false, 'plaque undo');
 console.log('perio.test ok');

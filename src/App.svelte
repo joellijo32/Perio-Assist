@@ -13,13 +13,28 @@
 
   // ponytail: summary stats are pure derivations - no stats engine until one is needed
   const bop = $derived.by(() => {
-    let hit = 0, total = 0;
+    let hit = 0,
+      total = 0;
     for (const t of Object.keys(store.teeth)) {
       if (store.absent[t]) continue;
       for (let s = 0; s < 6; s++) {
         if (store.teeth[t][s] == null) continue;
         total++;
         if (store.bleed[t][s]) hit++;
+      }
+    }
+    return { hit, total, pct: total ? Math.round((100 * hit) / total) : 0 };
+  });
+
+  const pi = $derived.by(() => {
+    let hit = 0,
+      total = 0;
+    for (const t of Object.keys(store.teeth)) {
+      if (store.absent[t]) continue;
+      for (let s = 0; s < 6; s++) {
+        if (store.teeth[t][s] == null) continue;
+        total++;
+        if (store.plaque[t][s]) hit++;
       }
     }
     return { hit, total, pct: total ? Math.round((100 * hit) / total) : 0 };
@@ -75,11 +90,12 @@
     <span>Tooth {store.cur.t} · {SITENAMES[store.cur.s]} ({store.cur.s + 1}/6)</span>
     <span>{teethDone}/32 teeth</span>
     <span>BOP {bop.pct}% ({bop.hit}/{bop.total})</span>
+    <span>PI {pi.pct}% ({pi.hit}/{pi.total})</span>
     <span>max PD {maxPD}</span>
     {#if store.latencyMs !== null}<span>{store.latencyMs.toFixed(0)}ms parse+render</span>{/if}
   </div>
 
-  <div class="legend">MB mesiobuccal · B buccal · DB distobuccal · ML mesiolingual · L lingual · DL distolingual · red dot = bleeding · yellow dot = suppuration · * = missing/implant · M = mobility · F = furcation · click a cell to move the cursor</div>
+  <div class="legend">MB mesiobuccal · B buccal · DB distobuccal · ML mesiolingual · L lingual · DL distolingual · red dot = bleeding · yellow dot = suppuration · blue dot = plaque · * = missing/implant · M = mobility · F = furcation · click a cell to move the cursor</div>
   <PerioChart />
 
   <input
