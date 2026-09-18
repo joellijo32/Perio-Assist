@@ -1,11 +1,16 @@
 <script>
   import { onDestroy } from 'svelte';
-  import { commit, previewPartial, resetAll, say, SITENAMES, store } from './chart.svelte.js';
+  import { commit, db, deletePatient, newPatient, openPatient, previewPartial, resetAll, savePatient, say, SITENAMES, store } from './chart.svelte.js';
   import { createRecognizer } from './recognizer.js';
+  import { search } from './db.js';
   import PerioChart from './PerioChart.svelte';
 
   let engine = $state('vosk');
   let draft = $state('');
+  let name = $state('');
+  let query = $state('');
+
+  const results = $derived(search(db.list, query));
 
   const teethDone = $derived(
     Object.values(store.teeth).filter((sites) => sites.some((v) => v !== null)).length,
@@ -75,6 +80,16 @@
     draft = '';
   }
 
+  function save() {
+    const rec = savePatient(name);
+    if (rec) name = rec.name;
+  }
+
+  function open(id) {
+    const found = openPatient(id);
+    if (found) name = found.name;
+  }
+
   onDestroy(() => recognizer.stop());
 </script>
 
@@ -86,6 +101,25 @@
     <button onclick={resetAll} disabled={store.listening}>Reset</button>
     <span>{store.status}</span>
   </div>
+  <div class="controls">
+    <button onclick={newPatient}>New</button>
+    <input class="name" bind:value={name} placeholder="Client name" />
+    <button onclick={save}>Save</button>
+    <input class="name" bind:value={query} placeholder="Search by name..." />
+    <span>{db.list.length} clients</span>
+  </div>
+  {#if query.trim() || db.list.length}
+    <div id="plist">
+      {#each results as p (p.id)}
+        <button class:cur={p.id === db.activeId} onclick={() => open(p.id)} title="Open {p.name}">
+          {p.name} · {new Date(p.updatedAt).toLocaleDateString()}
+        </button>
+        <button onclick={() => deletePatient(p.id)} title="Delete {p.name}">×</button>
+      {:else}
+        <span>No matches.</span>
+      {/each}
+    </div>
+  {/if}
   <div class="meta">
     <span>Tooth {store.cur.t} · {SITENAMES[store.cur.s]} ({store.cur.s + 1}/6)</span>
     <span>{teethDone}/32 teeth</span>
@@ -116,6 +150,9 @@
   .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .meta { display: flex; gap: 16px; margin: 8px 0; flex-wrap: wrap; }
   input { width: 100%; padding: 8px; box-sizing: border-box; }
+  input.name { width: 160px; }
+  #plist { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+  #plist button.cur { outline: 2px solid #333; }
   #tx { border: 1px solid #ddd; min-height: 60px; padding: 8px; margin-top: 8px; }
   .i { opacity: 0.5; font-style: italic; }
 </style>

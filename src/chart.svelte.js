@@ -19,23 +19,22 @@ export const preview = $state({ teeth: null, bleed: null, cur: null });
 
 let nextId = 1;
 
-export const patients = $state(loadAll());
-export let activeId = $state(null);
-export let patientName = $state('');
+export const db = $state({ list: loadAll(), activeId: null });
 
-export function savePatient() {
-  const name = patientName.trim();
-  if (!name) { store.status = 'Name needed to save.'; return; }
-  const rec = upsert(patients, name, snapshot(store));
-  if (!saveAll(patients)) { store.status = 'Storage full — export & delete old.'; return; }
-  activeId = rec.id;
+export function savePatient(name) {
+  const clean = name.trim();
+  if (!clean) { store.status = 'Name needed to save.'; return null; }
+  const rec = upsert(db.list, clean, snapshot(store));
+  if (!saveAll(db.list)) { store.status = 'Storage full — export & delete old.'; return null; }
+  db.activeId = rec.id;
   const done = Object.values(store.teeth).filter((s) => s.some((v) => v !== null)).length;
   store.status = `Saved ${rec.name} (${done} teeth).`;
+  return rec;
 }
 
 export function openPatient(id) {
-  const found = patients.find((p) => p.id === id);
-  if (!found) return;
+  const found = db.list.find((p) => p.id === id);
+  if (!found) return null;
   restore(store, found.chart);
   store.cur = { t: 1, s: 0 };
   store.hist = [];
@@ -44,21 +43,20 @@ export function openPatient(id) {
   store.overflowed = false;
   store.transcript = [];
   store.latencyMs = null;
-  activeId = found.id;
-  patientName = found.name;
+  db.activeId = found.id;
   store.status = `Opened ${found.name}.`;
+  return found;
 }
 
 export function deletePatient(id) {
-  remove(patients, id);
-  saveAll(patients);
-  if (activeId === id) { activeId = null; patientName = ''; }
+  remove(db.list, id);
+  saveAll(db.list);
+  if (db.activeId === id) db.activeId = null;
 }
 
 export function newPatient() {
   resetAll();
-  activeId = null;
-  patientName = '';
+  db.activeId = null;
 }
 
 export function say(text, final) {
