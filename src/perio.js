@@ -101,6 +101,7 @@ function quadToothToUni(quad, ord, type) {
 // ponytail: one status writer - present clears, the rest mark; undo restores via prev
 function markAbsent(state, ids, word) {
   if (word === 'healed') word = 'recovered';
+  if (word === 'pi') word = 'periimplantitis'; // ponytail: clinic shorthand - PI means peri-implantitis here, plaque keeps "plaque"
   for (const t of ids) {
     if (word === 'present') {
       if (state.absent[t] == null) continue;
@@ -608,18 +609,18 @@ export function parseInto(state, text) {
       state.aspect = 'facial';
       state.aspectSet = false;
       k = skipFiller(toks, k); // "tooth 5 is missing" / "are missing"
-      // ponytail: "peri implantitis" arrives split (hyphens tokenize) - pair it before single words
-      if (toks[k] === 'peri' && toks[k + 1] === 'implantitis') {
+      // ponytail: "peri implantitis" arrives split (hyphens tokenize); bare "peri implant" also means it
+      if (toks[k] === 'peri' && (toks[k + 1] === 'implantitis' || toks[k + 1] === 'implant')) {
         markAbsent(state, listed, 'periimplantitis');
         i = k + 1;
-      } else if (['missing', 'implant', 'present', 'periimplantitis', 'recovered', 'healed'].includes(toks[k])) {
+      } else if (['missing', 'implant', 'present', 'periimplantitis', 'pi', 'recovered', 'healed'].includes(toks[k])) {
         markAbsent(state, listed, toks[k]);
         i = k;
         // ponytail: land, don't skip - implants carry charting; sequential flow skips via advance/next
       } else i = k - 1;
       continue;
     }
-    if (w === 'peri' && toks[i + 1] === 'implantitis') {
+    if (w === 'peri' && (toks[i + 1] === 'implantitis' || toks[i + 1] === 'implant')) {
       flush();
       markAbsent(state, [state.cur.t], 'periimplantitis');
       i++;
@@ -648,7 +649,7 @@ export function parseInto(state, text) {
       }
       continue; // bare "all" ("all buccal 2-2-2") - nothing to do, rest flows normally
     }
-    if (w === 'missing' || w === 'implant' || w === 'periimplantitis' || w === 'recovered' || w === 'healed') {
+    if (w === 'missing' || w === 'implant' || w === 'periimplantitis' || w === 'pi' || w === 'recovered' || w === 'healed') {
       flush();
       markAbsent(state, [state.cur.t], w);
       continue;
@@ -736,7 +737,7 @@ export function parseInto(state, text) {
       }
       continue;
     }
-    if (w === 'plaque' || w === 'pi') {
+    if (w === 'plaque') {
       // ponytail: mirrors bleeding scope-for-scope - shared helper would couple two working branches
       const hadPending = nums.length > 0;
       flush();

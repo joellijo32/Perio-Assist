@@ -112,7 +112,7 @@ Grades are consumed as grades, never depths.
 ## Implant health (manual override, tinted yellow/red/green)
 
 - `tooth 14 has peri-implantitis` / `periimplantitis` / `peri implantitis`
-  — red tint, tooth keeps charting (disease monitoring)
+  / `peri implant` / `PI` — red tint, tooth keeps charting (disease monitoring)
 - `tooth 14 recovered` / `healed` — green tint
 - Plain `implant` — yellow tint. Tinted teeth probe and chart normally;
   only `missing` blanks and skips.
