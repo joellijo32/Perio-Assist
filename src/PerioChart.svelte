@@ -123,8 +123,8 @@
   .tcol { position: relative; }
   .labhead {
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 700; color: #d1f380; letter-spacing: 0.06em;
-    background: #1b2c1a; border-radius: 6px;
+    font-size: 14px; font-weight: 700; color: #1b2c1a; letter-spacing: 0.06em;
+    background: #eff9d2; border-radius: 6px;
     font-family: Geist, Inter, Manrope, system-ui, sans-serif;
   }
   .rlabel { font-size: 11px; color: #52525b; align-self: center; text-align: center; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
